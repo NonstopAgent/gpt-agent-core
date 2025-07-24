@@ -1,0 +1,14 @@
+{
+  "sessionToken": "your-chatgpt-session-token-here",
+  "schedule": {
+    "6:30": "postReel",
+    "8:00": "commentOnAccounts",
+    "9:30": "checkDMs",
+    "11:00": "generateSlideshow",
+    "13:00": "postSlideshow",
+    "15:00": "scanTrending",
+    "17:00": "engageAgain"
+  },
+  "brands": ["Remote100K", "Tradeview AI", "304 App"],
+  "logFile": "logs/actions.log"
+}
