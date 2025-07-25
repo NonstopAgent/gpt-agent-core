@@ -1,0 +1,15 @@
+{
+  "name": "gpt-agent-core",
+  "version": "1.0.0",
+  "description": "Codex-compatible GPT Agent",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "build": "echo 'No build step yet'"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  },
+  "devDependencies": {},
+  "type": "module"
+}
