@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>GPT Agent Dashboard</title>
+    <!-- Tailwind CSS via CDN.  If internet access is restricted you can copy the
+         compiled CSS into the project or include your own styles. -->
+    <script src="https://cdn.tailwindcss.com"></script>
+  </head>
+  <body class="h-screen flex flex-row bg-gray-100 text-gray-900">
+    <!-- Sidebar -->
+    <aside class="w-64 bg-gray-800 text-white flex flex-col p-4 space-y-6">
+      <div>
+        <h1 class="text-2xl font-bold mb-4">GPT Agent</h1>
+        <nav class="space-y-4 text-sm">
+          <div>
+            <h2 class="text-lg font-semibold">Remote100K</h2>
+            <ul class="ml-4 mt-1 space-y-1">
+              <li><a href="#" class="hover:underline" data-project="remote100k" data-section="slides">Slides</a></li>
+              <li><a href="#" class="hover:underline" data-project="remote100k" data-section="captions">Captions</a></li>
+              <li><a href="#" class="hover:underline" data-project="remote100k" data-section="prompts">Saved&nbsp;Prompts</a></li>
+              <li><a href="#" class="hover:underline" data-project="remote100k" data-section="uploads">Uploads</a></li>
+            </ul>
+          </div>
+          <div>
+            <h2 class="text-lg font-semibold">Tradeview&nbsp;AI</h2>
+            <ul class="ml-4 mt-1 space-y-1">
+              <li><a href="#" class="hover:underline" data-project="tradeviewai" data-section="slides">Slides</a></li>
+              <li><a href="#" class="hover:underline" data-project="tradeviewai" data-section="captions">Captions</a></li>
+              <li><a href="#" class="hover:underline" data-project="tradeviewai" data-section="prompts">Saved&nbsp;Prompts</a></li>
+              <li><a href="#" class="hover:underline" data-project="tradeviewai" data-section="uploads">Uploads</a></li>
+            </ul>
+          </div>
+          <div>
+            <h2 class="text-lg font-semibold">304&nbsp;App</h2>
+            <ul class="ml-4 mt-1 space-y-1">
+              <li><a href="#" class="hover:underline" data-project="304app" data-section="slides">Slides</a></li>
+              <li><a href="#" class="hover:underline" data-project="304app" data-section="captions">Captions</a></li>
+              <li><a href="#" class="hover:underline" data-project="304app" data-section="prompts">Saved&nbsp;Prompts</a></li>
+              <li><a href="#" class="hover:underline" data-project="304app" data-section="uploads">Uploads</a></li>
+            </ul>
+          </div>
+        </nav>
+      </div>
+      <div class="mt-auto text-xs text-gray-400">
+        <p>Logged in as <span id="userName">operator</span></p>
+      </div>
+    </aside>
+
+    <!-- Main content -->
+    <main class="flex-1 flex flex-col p-4 overflow-y-auto space-y-4">
+      <!-- Status bar -->
+      <section id="statusBar" class="bg-white rounded border p-3 flex justify-between items-center">
+        <div>
+          <span class="font-semibold">Status:</span>
+          <span id="statusText" class="text-green-600 font-medium">Idle</span>
+        </div>
+        <div class="space-x-4 text-sm">
+          <span>Last task: <span id="lastTask" class="font-medium">—</span></span>
+          <span>Next task: <span id="nextTask" class="font-medium">—</span></span>
+        </div>
+      </section>
+
+      <!-- Top grid: Chat and Daily tasks -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <!-- Chat Interface -->
+        <div class="bg-white rounded border p-4 flex flex-col h-80">
+          <h2 class="font-semibold mb-2">Chat Interface</h2>
+          <div id="chatLog" class="flex-1 border rounded p-2 bg-gray-50 overflow-y-auto text-sm space-y-1"></div>
+          <form id="chatForm" class="flex mt-2 space-x-2">
+            <input type="text" id="chatInput" class="flex-1 border rounded px-2 py-1" placeholder="Enter command…" />
+            <button type="submit" class="bg-blue-500 text-white px-4 py-1 rounded">Send</button>
+          </form>
+        </div>
+        <!-- Daily Tasks -->
+        <div class="bg-white rounded border p-4 h-80 overflow-y-auto">
+          <h2 class="font-semibold mb-2">Daily Tasks</h2>
+          <ul id="dailyTasks" class="list-disc list-inside text-sm space-y-1"></ul>
+        </div>
+      </div>
+
+      <!-- Middle grid: Queue and History -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <!-- Queue -->
+        <div class="bg-white rounded border p-4 h-64 overflow-y-auto">
+          <h2 class="font-semibold mb-2">Task Queue</h2>
+          <ul id="taskQueue" class="text-sm space-y-1"></ul>
+        </div>
+        <!-- History -->
+        <div class="bg-white rounded border p-4 h-64 overflow-y-auto">
+          <h2 class="font-semibold mb-2">Task History</h2>
+          <ul id="taskHistory" class="text-sm space-y-1"></ul>
+        </div>
+      </div>
+
+      <!-- Upload Panel -->
+      <div class="bg-white rounded border p-4">
+        <h2 class="font-semibold mb-2">Upload Panel</h2>
+        <form id="uploadForm" class="flex items-center space-x-3" enctype="multipart/form-data">
+          <select id="uploadBrand" class="border rounded px-2 py-1 text-sm">
+            <option value="remote100k">Remote100K</option>
+            <option value="tradeviewai">Tradeview&nbsp;AI</option>
+            <option value="304app">304&nbsp;App</option>
+          </select>
+          <input type="file" id="fileUpload" name="file" multiple class="border rounded px-2 py-1 text-sm" />
+          <button type="submit" class="bg-green-500 text-white px-4 py-1 rounded text-sm">Upload</button>
+        </form>
+        <div id="uploadStatus" class="text-xs mt-2 text-gray-600"></div>
+      </div>
+    </main>
+
+    <!-- Scripts -->
+    <script src="app.js"></script>
+  </body>
+</html>
