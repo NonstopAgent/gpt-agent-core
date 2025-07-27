@@ -1,0 +1,128 @@
+
+Here is the suggested patch for implementing basic authentication, a personalized greeting, and echo responses.
+
+--- agent.py (before)
++++ agent.py (after)
+@@
+ import cgi
+ import base64
+ from dotenv import load_dotenv
+
+ load_dotenv()
+
+@@
+ class AgentRequestHandler(http.server.SimpleHTTPRequestHandler):
+
+@@
+     def is_authorized(self) -> bool:
+         """Check HTTP Basic Authorization header against expected credentials."""
+         auth = self.headers.get("Authorization")
+         expected = "Basic " + base64.b64encode(b"logan:AllDay21!!!").decode("utf-8")
+         return auth == expected
+
+@@
+     def do_GET(self):
+         # Check authentication before serving
+         if not self.is_authorized():
+             self.send_response(HTTPStatus.UNAUTHORIZED)
+             self.send_header("WWW-Authenticate", 'Basic realm="Login required"')
+             self.end_headers()
+             return
+         parsed = urllib.parse.urlparse(self.path)
+         path = parsed.path
+         if path == "/api/queue":
+             self.handle_get_queue()
+         elif path == "/api/logs":
+             self.handle_get_logs()
+         elif path.startswith("/api/memory/"):
+             brand = path.split("/", 3)[-1]
+             self.handle_get_memory(brand)
+         else:
+             # serve static files from the frontend directory
+             self.serve_static()
+
+@@
+     def do_POST(self):
+         # Check authentication before serving
+         if not self.is_authorized():
+             self.send_response(HTTPStatus.UNAUTHORIZED)
+             self.send_header("WWW-Authenticate", 'Basic realm="Login required"')
+             self.end_headers()
+             return
+         parsed = urllib.parse.urlparse(self.path)
+         path = parsed.path
+         if path == "/api/chat":
+             self.handle_post_chat()
+         elif path == "/api/upload":
+             self.handle_post_upload()
+         else:
+             self.send_error(HTTPStatus.NOT_FOUND, "Unknown API endpoint")
+
+@@
+     def handle_post_chat(self):
+         try:
+             content_length = int(self.headers.get('Content-Length', 0))
+             body = self.rfile.read(content_length).decode()
+             # Echo back the request body in a response
+             self.respond_json({"status": "received", "echo": body})
+         except Exception as e:
+             self.send_error(500, f"Error handling request: {str(e)}")
+
+--- frontend/index.html (before)
++++ frontend/index.html (after)
+@@
+ <body class="bg-gray-100">
+   <!-- Personalized greeting -->
+   <header class="p-4 text-center text-white bg-blue-600">
+     <h1 class="text-2xl font-bold">Welcome, Logan!</h1>
+   </header>
+
+--- frontend/app.js (before)
++++ frontend/app.js (after)
+@@ document.addEventListener('DOMContentLoaded', () => {
+   // Basic auth header for API requests
+   const authHeader = 'Basic ' + btoa('logan:AllDay21!!!');
+
+@@ chatForm.addEventListener('submit', async (e) => {
+     try {
+       const res = await fetch('/api/chat', {
+         method: 'POST',
+         headers: {
+           'Content-Type': 'text/plain',
+           'Authorization': authHeader
+         },
+         body: command
+       });
+       const data = await res.json();
+       const botMsg = document.createElement('div');
+       botMsg.className = 'text-green-700';
+       botMsg.textContent = `Agent: ${data.echo || data.status}`;
+       chatLog.appendChild(botMsg);
+       chatLog.scrollTop = chatLog.scrollHeight;
+       // Refresh status
+       updateStatus();
+     } catch (err) {
+       const errMsg = document.createElement('div');
+       errMsg.className = 'text-red-600';
+       errMsg.textContent = 'Error sending command';
+       chatLog.appendChild(errMsg);
+       chatLog.scrollTop = chatLog.scrollHeight;
+     }
+   });
+
+@@ async function loadQueue() {
+     const res = await fetch('/api/queue', {
+       headers: { 'Authorization': authHeader }
+     });
+
+@@ async function loadHistory() {
+     const res = await fetch('/api/logs', {
+       headers: { 'Authorization': authHeader }
+     });
+
+@@ uploadForm.addEventListener('submit', async (e) => {
+       const res = await fetch('/api/upload', {
+         method: 'post',
+         headers: { 'Authorization': authHeader },
+         body: formData
+       });
