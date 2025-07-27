@@ -23,6 +23,8 @@ import urllib.parse
 from pathlib import Path
 from http import HTTPStatus
 import cgi
+from dotenv import load_dotenv
+load_dotenv()
 
 # Resolve base directory relative to this script
 BASE_DIR = Path(__file__).resolve().parent
@@ -106,8 +108,12 @@ class AgentRequestHandler(http.server.SimpleHTTPRequestHandler):
             self.respond_json(mem)
         else:
             self.send_error(HTTPStatus.NOT_FOUND, f"Memory for '{brand}' not found")
-
-    def handle_post_chat(self):
+        def handle_post_chat(self):
+    try:        content_length = int(self.headers.get('Content-Length', 0))
+        body = self.rfile.read(content_length).decode()
+        self.respond_json({"status": "received", "echo": body})
+    except Exception as e:
+        self.send_error(500, f"Error handling request: {str(e)}")
         try:
             content_length = int(self.headers.get('Content-Length', 0))
             body = self.rfile.read(content_length)
