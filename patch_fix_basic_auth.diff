@@ -1,0 +1,96 @@
+--- agent.py
+@@
+-    def do_GET(self):
+-        # Check authentication before serving
+-        if not self.is_authorized():
+-            self.send_response(HTTPStatus.UNAUTHORIZED)
+-            self.send_header("WWW-Authenticate", 'Basic realm="Login required"')
+-            self.end_headers()
+-            return
+-        parsed = urllib.parse.urlparse(self.path)
+-        path = parsed.path
+-        if path == "/api/queue":
+-            self.handle_get_queue()
+-        elif path == "/api/logs":
+-            self.handle_get_logs()
+-        elif path.startswith("/api/memory/"):
+-            brand = path.split("/", 3)[-1]
+-            self.handle_get_memory(brand)
+-        else:
+-            # serve static files from the frontend directory
+-            self.serve_static()
++    def do_GET(self):
++        parsed = urllib.parse.urlparse(self.path)
++        path = parsed.path
++        if path.startswith("/api/"):
++            # Require authentication only for API endpoints
++            if not self.is_authorized():
++                self.send_response(HTTPStatus.UNAUTHORIZED)
++                self.send_header("WWW-Authenticate", 'Basic realm="Login required"')
++                self.end_headers()
++                return
++            if path == "/api/queue":
++                self.handle_get_queue()
++            elif path == "/api/logs":
++                self.handle_get_logs()
++            elif path.startswith("/api/memory/"):
++                brand = path.split("/", 3)[-1]
++                self.handle_get_memory(brand)
++            else:
++                self.send_error(HTTPStatus.NOT_FOUND, "Unknown API endpoint")
++        else:
++            # Serve static files without requiring authentication
++            super().do_GET()
+@@
+-    def do_POST(self):
+-        # Check authentication before serving
+-        if not self.is_authorized():
+-            self.send_response(HTTPStatus.UNAUTHORIZED)
+-            self.send_header("WWW-Authenticate", 'Basic realm="Login required"')
+-            self.end_headers()
+-            return
+-        parsed = urllib.parse.urlparse(self.path)
+-        path = parsed.path
+-        if path == "/api/chat":
+-            self.handle_post_chat()
+-        elif path == "/api/upload":
+-            self.handle_post_upload()
+-        else:
+-            self.send_error(HTTPStatus.NOT_FOUND, "Unknown API endpoint")
++    def do_POST(self):
++        parsed = urllib.parse.urlparse(self.path)
++        path = parsed.path
++        if path.startswith("/api/"):
++            # Require authentication only for API endpoints
++            if not self.is_authorized():
++                self.send_response(HTTPStatus.UNAUTHORIZED)
++                self.send_header("WWW-Authenticate", 'Basic realm="Login required"')
++                self.end_headers()
++                return
++            if path == "/api/chat":
++                self.handle_post_chat()
++            elif path == "/api/upload":
++                self.handle_post_upload()
++            else:
++                self.send_error(HTTPStatus.NOT_FOUND, "Unknown API endpoint")
++        else:
++            # No static POST routes
++            self.send_error(HTTPStatus.NOT_FOUND, "Unknown endpoint")
+--- frontend/app.js
+@@ document.addEventListener('DOMContentLoaded', () => {
+   // Basic auth header for API requests
+   const authHeader = 'Basic ' + btoa('logan:AllDay21!!!');
++
++  // Automatically attach the Authorization header to all API requests.
++  // This override wraps the built-in fetch() and adds the header when
++  // the URL begins with "/api/". Static asset requests are not touched.
++  const originalFetch = window.fetch;
++  window.fetch = function(url, options = {}) {
++    // Ensure options is an object and headers exists
++    options = options || {};
++    options.headers = options.headers || {};
++    if (typeof url === 'string' && url.startsWith('/api/')) {
++      options.headers['Authorization'] = authHeader;
++    }
++    return originalFetch(url, options);
++  };
