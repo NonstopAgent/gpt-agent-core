@@ -136,13 +136,13 @@ document.addEventListener('DOMContentLoaded', () => {
     renderChat();
     chatInput.value = '';
     try {
-      const res = await fetch('https://gpt-agent-core-production.up.railway.app/api/chat', {
+      const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ project: activeProject, message: content })
+        body: JSON.stringify({ message: content })
       });
       const data = await res.json();
-      msgs.push({ role: 'assistant', content: data.reply });
+      msgs.push({ role: 'assistant', content: data.response });
       conversations[activeProject] = msgs;
       renderChat();
       console.log(`✅ Chat + Memory working for ${activeProject}`);
