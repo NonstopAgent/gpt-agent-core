@@ -26,7 +26,15 @@ gpt-agent-core/
 
 ## Frontend
 
-The dashboard lives in the `frontend/` directory and is intentionally implemented without external build tools such as React or Vite.  This makes it lightweight and easy to run in any environment, even when package installation is restricted.  Tailwind CSS is included via CDN for rapid styling, and the interface is composed of vanilla HTML and JavaScript.
+The dashboard lives in the `frontend/` directory and is a small [React](https://react.dev/) application built with [Vite](https://vitejs.dev/).  The repository already contains the compiled files under `frontend/dist`, so you can run the server without installing any Node tooling.  If you want to modify the UI, install the dependencies in `frontend/` and rebuild:
+
+```bash
+cd frontend
+npm install
+npm run build
+```
+
+The build output will be placed in `frontend/dist` and served by the Python backend.
 
 Key interface elements include:
 
@@ -52,6 +60,22 @@ python3 agent.py
 The server will start on port 8000 by default (or whatever value you set in the
 `PORT` environment variable).  Visit `http://localhost:8000` in your browser to
 load the dashboard.
+
+### Running 24/7
+
+If you want the agent to run continuously on a server you can install it as a
+`systemd` service.  A sample unit file is provided in `deploy/agent.service`.
+Edit the paths and user, copy it to `/etc/systemd/system/`, then enable and
+start the service:
+
+```bash
+sudo cp deploy/agent.service /etc/systemd/system/gpt-agent.service
+sudo systemctl daemon-reload
+sudo systemctl enable --now gpt-agent.service
+```
+
+The dashboard will then be accessible on the configured port whenever the
+machine is running.
 
 ### API Endpoints
 
