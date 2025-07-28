@@ -139,7 +139,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ project: activeProject, messages: msgs })
+        body: JSON.stringify({ project: activeProject, message: content })
       });
       const data = await res.json();
       msgs.push({ role: 'assistant', content: data.reply });
