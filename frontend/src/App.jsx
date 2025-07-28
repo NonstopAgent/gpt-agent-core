@@ -43,6 +43,7 @@ function App() {
       return []
     }
   })
+  const pendingIndex = useRef(null)
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark')
@@ -88,6 +89,15 @@ function App() {
     if (!text) return
     setMessages(m => [...m, { role: 'user', content: text, timestamp: new Date().toISOString() }])
     setInput('')
+
+    const isImage = text.toLowerCase().includes('image')
+    const placeholder = { role: 'assistant', content: isImage ? 'Generating image...' : '...', pending: true }
+    setMessages(m => {
+      const arr = [...m, placeholder]
+      pendingIndex.current = arr.length - 1
+      return arr
+    })
+
     try {
       const headers = { 'Content-Type': 'application/json' }
       if (authHeader.current) headers.Authorization = authHeader.current
@@ -97,10 +107,30 @@ function App() {
         body: JSON.stringify({ message: text })
       })
       const data = await res.json()
-      setMessages(m => [...m, { role: 'assistant', content: data.response, timestamp: data.timestamp }])
+      setMessages(m => {
+        const arr = [...m]
+        const idx = pendingIndex.current
+        if (idx !== null && arr[idx] && arr[idx].pending) {
+          arr[idx] = { role: 'assistant', content: data.response, timestamp: data.timestamp }
+        } else {
+          arr.push({ role: 'assistant', content: data.response, timestamp: data.timestamp })
+        }
+        pendingIndex.current = null
+        return arr
+      })
       loadData()
     } catch {
-      setMessages(m => [...m, { role: 'assistant', content: 'Error contacting server.' }])
+      setMessages(m => {
+        const arr = [...m]
+        const idx = pendingIndex.current
+        if (idx !== null && arr[idx] && arr[idx].pending) {
+          arr[idx] = { role: 'assistant', content: 'Error contacting server.' }
+        } else {
+          arr.push({ role: 'assistant', content: 'Error contacting server.' })
+        }
+        pendingIndex.current = null
+        return arr
+      })
     }
   }
 
@@ -182,7 +212,9 @@ function App() {
                 {messages.map((m, i) => (
                   <div key={i} className={`w-full ${m.role === 'user' ? 'bg-user' : 'bg-assistant'} py-3 px-4 text-sm`}>
                     <div className="max-w-2xl mx-auto space-y-1 whitespace-pre-wrap">
-                      <div className="chat-message-content">{m.content}</div>
+                      <div className="chat-message-content">
+                        {m.pending ? <span className="animate-pulse">{m.content}</span> : m.content}
+                      </div>
                       <div className="text-[10px] text-gray-500 text-right">{new Date(m.timestamp).toLocaleTimeString()}</div>
                     </div>
                   </div>
