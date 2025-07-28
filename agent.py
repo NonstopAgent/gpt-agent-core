@@ -132,6 +132,18 @@ class AgentRequestHandler(http.server.SimpleHTTPRequestHandler):
         queue.append({"task": command, "timestamp": timestamp})
         save_json(queue_path, queue)
         self.respond_json({"status": "queued", "timestamp": timestamp})
+    def handle_post_chat(self):
+        if not self.is_authorized():
+            self.send_response(HTTPStatus.UNAUTHORIZED)
+            self.send_header("WWW-Authenticate", 'Basic realm="Login required"')
+            self.end_headers()
+            return
+        try:
+            content_length = int(self.headers.get('Content-Length', 0))
+            body = self.rfile.read(content_length).decode()
+            self.respond_json({"status": "received", "body": body})
+        except Exception as e:
+            self.send_error(HTTPStatus.INTERNAL_SERVER_ERROR, f"Error: {e}")
 
     def handle_post_upload(self):
         # Parse multipart form data
