@@ -180,24 +180,26 @@ function App() {
                   <div className="text-center text-gray-500 py-10">{greetingRef.current}</div>
                 )}
                 {messages.map((m, i) => (
-                  <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                    <div className={`max-w-sm px-3 py-2 rounded-xl shadow-sm ${m.role === 'user' ? 'bg-blue-100 text-gray-900' : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100'}`}>
-                      {m.content}
-                      <div className="mt-1 text-[10px] text-gray-500">{new Date(m.timestamp).toLocaleTimeString()}</div>
+                  <div key={i} className={`w-full ${m.role === 'user' ? 'bg-user' : 'bg-assistant'} py-3 px-4 text-sm`}>
+                    <div className="max-w-2xl mx-auto space-y-1 whitespace-pre-wrap">
+                      <div className="chat-message-content">{m.content}</div>
+                      <div className="text-[10px] text-gray-500 text-right">{new Date(m.timestamp).toLocaleTimeString()}</div>
                     </div>
                   </div>
                 ))}
                 <div ref={messagesEndRef} />
               </div>
               <div className="p-2 bg-white dark:bg-gray-900 sticky bottom-0 flex gap-2">
-                <input
+                <textarea
                   value={input}
                   onChange={e => setInput(e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && send()}
-                  placeholder="Ask me anything or give a command..."
-                  className="flex-1 border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-2 text-sm bg-transparent focus:outline-none"
+                  onInput={e => { e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px'; }}
+                  onKeyDown={e => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), send())}
+                  placeholder="Send a message"
+                  rows={1}
+                  className="chat-input flex-1 border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-2 text-sm bg-transparent focus:outline-none"
                 />
-                <button onClick={send} className="bg-blue-500 text-white p-2 rounded-lg shadow-sm">
+                <button onClick={send} className="bg-blue-500 text-white p-2 rounded-lg shadow-sm self-end">
                   <PaperAirplaneIcon className="w-5 h-5" />
                 </button>
               </div>
