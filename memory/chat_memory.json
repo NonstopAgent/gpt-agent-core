@@ -1,0 +1,14 @@
+{
+  "remote100k": {
+    "messages": [],
+    "instructions": "Use navy/gold/white. All posts are slideshows. Add CTA slides. Use hook-based captions."
+  },
+  "tradeview_ai": {
+    "messages": [],
+    "instructions": "Use navy/orange. Speak to blue-collar contractors. Mention automations like Call Rescue and Auto Reviews. CTA = 'DM DEMO'"
+  },
+  "app_304": {
+    "messages": [],
+    "instructions": "Use black/masculine tone. App is for voting on dating profiles. Use bold, edgy, funny tone."
+  }
+}

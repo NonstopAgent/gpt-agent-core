@@ -72,20 +72,130 @@ class Agent:
 chat_memory = _load_memory()
 agent = Agent()
 ajax_agent = build_default_ajax()
-# For now, manually set Logan's presence
-ajax_agent.is_logan_present = True
+
+# Presence override flag.  When ``None``, Ajax falls back to the username
+# provided by basic auth to determine whether Logan is present.  When
+# ``True`` or ``False``, Ajax will operate in assistant (Ajax) or
+# business owner (Logan) mode respectively regardless of who is
+# authenticated.  This can be controlled via chat commands or UI toggle.
+presence_override: bool | None = None
+
+# Real‑time status information for the web view panel.  The ``mode``
+# field reflects whether Ajax is operating in assistant mode (``ajax``)
+# or acting as Logan (``logan``).  ``last_command`` records the most
+# recent user command, ``delegating`` contains the name of the
+# subordinate agent currently handling a task (or ``None``),
+# ``task_progress`` indicates whether the agent is idle or working, and
+# ``history`` retains the last few responses for display in the panel.
+status_info = {
+    'mode': 'ajax' if ajax_agent.is_logan_present else 'logan',
+    'last_command': '',
+    'delegating': None,
+    'task_progress': 'idle',
+    'history': [],
+}
 
 
 
 def handle_post_chat(data: dict) -> dict:
-    """Process a chat request and return a response payload."""
-    user_message = (data.get('message') or '').strip()
-    # project = data.get('project', 'general')  # Not used currently
+    """Process a chat request and return a response payload.
 
-    # Generate a reply using the Ajax agent. Additional
-    # logic and memory handling is performed later in this function.
-    reply = ajax_agent.generate_response(user_message)
+    This function implements dynamic presence detection, slash commands
+    for toggling modes and delegating tasks, and status tracking for
+    display in the web view panel.
+
+    Supported slash commands:
+
+    - ``/loganin``: mark Logan as present (assistant mode).
+    - ``/loganout``: mark Logan as away (Logan mode).
+    - ``/delegate <agent> <task>``: delegate the task to a registered
+      sub‑agent (``investor``, ``fanpage``, ``support``, ``growth``).
+    """
+    global presence_override, status_info
+    user_message = (data.get('message') or '').strip()
+
+    # Determine presence based on override or authenticated username.
+    # If presence_override is None, infer from the basic auth username:
+    # Logan or NonstopAgent indicates that Logan is present.
+    auth = request.authorization
+    if presence_override is None:
+        user = (auth.username.lower() if auth and auth.username else '')
+        # Recognise common variants of Logan’s username
+        if user in {'logan', 'logan alvarez', 'nonstopagent'}:
+            ajax_agent.is_logan_present = True
+        else:
+            ajax_agent.is_logan_present = False
+    else:
+        # Use the override value directly
+        ajax_agent.is_logan_present = bool(presence_override)
+
+    # Precompute timestamp for responses
     timestamp = datetime.now().isoformat()
+
+    # Handle presence toggle commands
+    lowered = user_message.lower()
+    if lowered.startswith('/loganin'):
+        presence_override = True
+        ajax_agent.is_logan_present = True
+        status_info['mode'] = 'ajax'
+        status_info['last_command'] = '/loganin'
+        status_info['delegating'] = None
+        status_info['task_progress'] = 'idle'
+        response = 'Logan presence activated. Ajax will speak like a helpful assistant.'
+        status_info['history'].append(response)
+        status_info['history'] = status_info['history'][-5:]
+        return {'response': response, 'timestamp': timestamp}
+
+    if lowered.startswith('/loganout'):
+        presence_override = False
+        ajax_agent.is_logan_present = False
+        status_info['mode'] = 'logan'
+        status_info['last_command'] = '/loganout'
+        status_info['delegating'] = None
+        status_info['task_progress'] = 'idle'
+        response = 'Logan marked as away. I will speak on Logan’s behalf.'
+        status_info['history'].append(response)
+        status_info['history'] = status_info['history'][-5:]
+        return {'response': response, 'timestamp': timestamp}
+
+    # Handle delegation command: /delegate agent_name task description
+    if lowered.startswith('/delegate'):
+        # Split into at most three parts: command, agent name, remainder of task
+        parts = user_message.split(None, 2)
+        if len(parts) < 3:
+            response = 'Invalid delegate command. Usage: /delegate <agent> <task>'
+            return {'response': response, 'timestamp': timestamp}
+        _, agent_name, task = parts
+        try:
+            status_info['mode'] = 'ajax' if ajax_agent.is_logan_present else 'logan'
+            status_info['last_command'] = user_message
+            status_info['delegating'] = agent_name
+            status_info['task_progress'] = 'working'
+            result = ajax_agent.delegate(agent_name, task)
+            status_info['task_progress'] = 'idle'
+            status_info['history'].append(result)
+            status_info['history'] = status_info['history'][-5:]
+            return {'response': result, 'timestamp': timestamp}
+        except Exception as e:
+            status_info['task_progress'] = 'idle'
+            error = f"Delegation error: {e}"
+            status_info['history'].append(error)
+            status_info['history'] = status_info['history'][-5:]
+            return {'response': error, 'timestamp': timestamp}
+
+    # Normal chat flow: update status and generate response
+    status_info['mode'] = 'ajax' if ajax_agent.is_logan_present else 'logan'
+    status_info['last_command'] = user_message
+    status_info['delegating'] = None
+    status_info['task_progress'] = 'working'
+
+    # Use AjaxAI to generate a response based on presence
+    reply = ajax_agent.generate_response(user_message)
+
+    status_info['task_progress'] = 'idle'
+    status_info['history'].append(reply)
+    status_info['history'] = status_info['history'][-5:]
+
     return {'response': reply, 'timestamp': timestamp}
 
    
@@ -250,6 +360,19 @@ def task_status() -> 'flask.Response':
                 'status': latest.get('status', 'pending')
             }
     return jsonify(status)
+
+
+@app.route('/api/status', methods=['GET'])
+@require_auth
+def get_status() -> 'flask.Response':
+    """Return the real‑time status information for the agent.
+
+    This endpoint exposes the current mode (ajax or logan), the last
+    command issued by the user, any ongoing delegation, the current
+    progress state, and the recent history of responses.  It can be
+    polled by the frontend to populate a status panel.
+    """
+    return jsonify(status_info)
 
 
 @app.route('/', defaults={'path': ''})
