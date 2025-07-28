@@ -1,0 +1,14 @@
+[Unit]
+Description=GPT Agent Core service
+After=network.target
+
+[Service]
+Type=simple
+User=YOUR_USER
+WorkingDirectory=/path/to/gpt-agent-core
+EnvironmentFile=/path/to/gpt-agent-core/.env
+ExecStart=/usr/bin/python3 /path/to/gpt-agent-core/agent.py
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
