@@ -26,19 +26,19 @@
           <div>
             <h2 class="text-lg font-semibold">Tradeview&nbsp;AI</h2>
             <ul class="ml-4 mt-1 space-y-1">
-              <li><a href="#" class="hover:underline" data-project="tradeviewai" data-section="slides">Slides</a></li>
-              <li><a href="#" class="hover:underline" data-project="tradeviewai" data-section="captions">Captions</a></li>
-              <li><a href="#" class="hover:underline" data-project="tradeviewai" data-section="prompts">Saved&nbsp;Prompts</a></li>
-              <li><a href="#" class="hover:underline" data-project="tradeviewai" data-section="uploads">Uploads</a></li>
+              <li><a href="#" class="hover:underline" data-project="tradeview_ai" data-section="slides">Slides</a></li>
+              <li><a href="#" class="hover:underline" data-project="tradeview_ai" data-section="captions">Captions</a></li>
+              <li><a href="#" class="hover:underline" data-project="tradeview_ai" data-section="prompts">Saved&nbsp;Prompts</a></li>
+              <li><a href="#" class="hover:underline" data-project="tradeview_ai" data-section="uploads">Uploads</a></li>
             </ul>
           </div>
           <div>
             <h2 class="text-lg font-semibold">304&nbsp;App</h2>
             <ul class="ml-4 mt-1 space-y-1">
-              <li><a href="#" class="hover:underline" data-project="304app" data-section="slides">Slides</a></li>
-              <li><a href="#" class="hover:underline" data-project="304app" data-section="captions">Captions</a></li>
-              <li><a href="#" class="hover:underline" data-project="304app" data-section="prompts">Saved&nbsp;Prompts</a></li>
-              <li><a href="#" class="hover:underline" data-project="304app" data-section="uploads">Uploads</a></li>
+              <li><a href="#" class="hover:underline" data-project="app_304" data-section="slides">Slides</a></li>
+              <li><a href="#" class="hover:underline" data-project="app_304" data-section="captions">Captions</a></li>
+              <li><a href="#" class="hover:underline" data-project="app_304" data-section="prompts">Saved&nbsp;Prompts</a></li>
+              <li><a href="#" class="hover:underline" data-project="app_304" data-section="uploads">Uploads</a></li>
             </ul>
           </div>
         </nav>
@@ -66,10 +66,17 @@
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <!-- Chat Interface -->
         <div class="bg-white rounded border p-4 flex flex-col h-80">
-          <h2 class="font-semibold mb-2">Chat Interface</h2>
+          <div class="flex items-center justify-between mb-2">
+            <h2 class="font-semibold">Chat Interface</h2>
+            <select id="projectSelect" class="border rounded text-sm px-1 py-0.5">
+              <option value="remote100k">Remote100K</option>
+              <option value="tradeview_ai">Tradeview&nbsp;AI</option>
+              <option value="app_304">304&nbsp;App</option>
+            </select>
+          </div>
           <div id="chatLog" class="flex-1 border rounded p-2 bg-gray-50 overflow-y-auto text-sm space-y-1"></div>
           <form id="chatForm" class="flex mt-2 space-x-2">
-            <input type="text" id="chatInput" class="flex-1 border rounded px-2 py-1" placeholder="Enter command…" />
+            <input type="text" id="chatInput" class="flex-1 border rounded px-2 py-1" placeholder="Type a message…" />
             <button type="submit" class="bg-blue-500 text-white px-4 py-1 rounded">Send</button>
           </form>
         </div>
@@ -100,8 +107,8 @@
         <form id="uploadForm" class="flex items-center space-x-3" enctype="multipart/form-data">
           <select id="uploadBrand" class="border rounded px-2 py-1 text-sm">
             <option value="remote100k">Remote100K</option>
-            <option value="tradeviewai">Tradeview&nbsp;AI</option>
-            <option value="304app">304&nbsp;App</option>
+            <option value="tradeview_ai">Tradeview&nbsp;AI</option>
+            <option value="app_304">304&nbsp;App</option>
           </select>
           <input type="file" id="fileUpload" name="file" multiple class="border rounded px-2 py-1 text-sm" />
           <button type="submit" class="bg-green-500 text-white px-4 py-1 rounded text-sm">Upload</button>

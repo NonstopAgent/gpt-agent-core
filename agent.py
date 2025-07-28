@@ -24,13 +24,16 @@ from pathlib import Path
 from http import HTTPStatus
 import cgi
 from dotenv import load_dotenv
+import openai
 load_dotenv()
+openai.api_key = os.environ.get("OPENAI_API_KEY", "")
 
 # Resolve base directory relative to this script
 BASE_DIR = Path(__file__).resolve().parent
 FRONTEND_DIR = BASE_DIR / "frontend"
 LOGS_DIR = BASE_DIR / "logs"
 MEMORY_DIR = BASE_DIR / "memory"
+MEMORY_STORE_FILE = MEMORY_DIR / "chat_memory.json"
 
 def load_json(path, default=None):
     """Load JSON from the given path, returning default if file is missing."""
@@ -45,8 +48,23 @@ def save_json(path, data):
     with open(path, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2)
 
+def load_memory_store():
+    return load_json(MEMORY_STORE_FILE, default={
+        "remote100k": {"messages": [], "instructions": ""},
+        "tradeview_ai": {"messages": [], "instructions": ""},
+        "app_304": {"messages": [], "instructions": ""}
+    })
+
+def save_memory_store(data):
+    MEMORY_STORE_FILE.parent.mkdir(parents=True, exist_ok=True)
+    save_json(MEMORY_STORE_FILE, data)
+
 class AgentRequestHandler(http.server.SimpleHTTPRequestHandler):
     """Request handler implementing API endpoints and static file serving."""
+
+    def is_authorized(self) -> bool:
+        """Placeholder authorization check."""
+        return True
 
     def end_headers(self):
         # Allow cross‑origin requests for the frontend
@@ -102,12 +120,9 @@ class AgentRequestHandler(http.server.SimpleHTTPRequestHandler):
         self.respond_json(logs)
 
     def handle_get_memory(self, brand):
-        mem_file = MEMORY_DIR / brand / "memory.json"
-        if mem_file.exists():
-            mem = load_json(mem_file, default={})
-            self.respond_json(mem)
-        else:
-            self.send_error(HTTPStatus.NOT_FOUND, f"Memory for '{brand}' not found")
+        store = load_memory_store()
+        mem = store.get(brand, {"messages": [], "instructions": ""})
+        self.respond_json(mem)
 
     def handle_post_chat(self):
         if not self.is_authorized():
@@ -116,9 +131,34 @@ class AgentRequestHandler(http.server.SimpleHTTPRequestHandler):
             self.end_headers()
             return
         try:
-            content_length = int(self.headers.get('Content-Length', 0))
-            body = self.rfile.read(content_length).decode()
-            self.respond_json({"status": "received", "echo": body})
+            length = int(self.headers.get('Content-Length', 0))
+            body = json.loads(self.rfile.read(length).decode())
+            project = body.get('project')
+            messages = body.get('messages', [])
+            if not project or not isinstance(messages, list):
+                self.send_error(HTTPStatus.BAD_REQUEST, "Invalid payload")
+                return
+
+            store = load_memory_store()
+            mem = store.get(project, {"messages": [], "instructions": ""})
+            prompt_messages = []
+            if mem.get("instructions"):
+                prompt_messages.append({"role": "system", "content": mem["instructions"]})
+            prompt_messages.extend(messages)
+
+            reply_text = ""
+            try:
+                resp = openai.ChatCompletion.create(model=os.environ.get("OPENAI_MODEL", "gpt-3.5-turbo"), messages=prompt_messages)
+                reply_text = resp["choices"][0]["message"]["content"].strip()
+            except Exception as api_err:
+                reply_text = f"Error: {api_err}"
+
+            # update memory with new conversation
+            mem["messages"] = messages + [{"role": "assistant", "content": reply_text}]
+            store[project] = mem
+            save_memory_store(store)
+
+            self.respond_json({"reply": reply_text})
         except Exception as e:
             self.send_error(500, f"Error handling request: {e}")
 
