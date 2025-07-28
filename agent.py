@@ -144,6 +144,25 @@ def upload() -> 'flask.Response':
     return jsonify({'project': project, 'files': saved})
 
 
+@app.route('/api/task/status', methods=['GET'])
+def task_status() -> 'flask.Response':
+    """Return simple status of the latest queued task."""
+    queue_path = os.path.join('logs', 'queue.json')
+    status = {'status': 'idle'}
+    if os.path.exists(queue_path):
+        with open(queue_path, 'r', encoding='utf-8') as f:
+            q = json.load(f)
+        if q:
+            latest = q[-1]
+            status = {
+                'task': latest.get('task'),
+                'project': latest.get('project'),
+                'timestamp': latest.get('timestamp'),
+                'status': latest.get('status', 'pending')
+            }
+    return jsonify(status)
+
+
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')
 @require_auth
