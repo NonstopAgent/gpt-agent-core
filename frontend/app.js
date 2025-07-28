@@ -29,8 +29,31 @@ document.addEventListener('DOMContentLoaded', () => {
   const chatLog = document.getElementById('chatLog');
   const chatForm = document.getElementById('chatForm');
   const chatInput = document.getElementById('chatInput');
+  const projectSelect = document.getElementById('projectSelect');
   const uploadForm = document.getElementById('uploadForm');
   const uploadStatus = document.getElementById('uploadStatus');
+
+  let activeProject = projectSelect.value;
+  const conversations = {};
+
+  async function loadConversation(project) {
+    const res = await fetch(`/api/memory/${project}`);
+    const data = await res.json();
+    conversations[project] = data.messages || [];
+    renderChat();
+  }
+
+  function renderChat() {
+    chatLog.innerHTML = '';
+    const msgs = conversations[activeProject] || [];
+    msgs.forEach(m => {
+      const div = document.createElement('div');
+      div.className = m.role === 'assistant' ? 'text-right text-green-700' : 'text-left text-blue-700';
+      div.textContent = m.content;
+      chatLog.appendChild(div);
+    });
+    chatLog.scrollTop = chatLog.scrollHeight;
+  }
 
   // Load queue and history from server
   async function loadQueue() {
@@ -94,41 +117,38 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Initial load
   updateStatus();
+  loadConversation(activeProject);
   // Poll periodically for updates
   setInterval(updateStatus, 30000);
+
+  projectSelect.addEventListener('change', () => {
+    activeProject = projectSelect.value;
+    loadConversation(activeProject);
+  });
 
   // Handle chat submissions
   chatForm.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const command = chatInput.value.trim();
-    if (!command) return;
-    // Append to chat log
-    const userMsg = document.createElement('div');
-    userMsg.className = 'text-blue-700';
-    userMsg.textContent = `You: ${command}`;
-    chatLog.appendChild(userMsg);
-    chatLog.scrollTop = chatLog.scrollHeight;
+    const content = chatInput.value.trim();
+    if (!content) return;
+    const msgs = conversations[activeProject] || [];
+    msgs.push({ role: 'user', content });
+    renderChat();
     chatInput.value = '';
     try {
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ command })
+        body: JSON.stringify({ project: activeProject, messages: msgs })
       });
       const data = await res.json();
-      const botMsg = document.createElement('div');
-      botMsg.className = 'text-green-700';
-      botMsg.textContent = `Agent: queued at ${data.timestamp}`;
-      chatLog.appendChild(botMsg);
-      chatLog.scrollTop = chatLog.scrollHeight;
-      // Refresh status
-      updateStatus();
+      msgs.push({ role: 'assistant', content: data.reply });
+      conversations[activeProject] = msgs;
+      renderChat();
+      console.log(`✅ Chat + Memory working for ${activeProject}`);
     } catch (err) {
-      const errMsg = document.createElement('div');
-      errMsg.className = 'text-red-600';
-      errMsg.textContent = 'Error sending command';
-      chatLog.appendChild(errMsg);
-      chatLog.scrollTop = chatLog.scrollHeight;
+      msgs.push({ role: 'assistant', content: 'Error: could not reach server' });
+      renderChat();
     }
   });
 
