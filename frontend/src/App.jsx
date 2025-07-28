@@ -1,10 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
-import {
-  Bars3Icon,
-  ChevronDownIcon,
-  ChevronRightIcon,
-} from '@heroicons/react/24/outline'
+import { Bars3Icon } from '@heroicons/react/24/outline'
 import { PaperAirplaneIcon, PlusIcon } from '@heroicons/react/24/solid'
+import Sidebar from './Sidebar.jsx'
 import AgentStatus from './AgentStatus.jsx'
 import PersonalAssistant from './PersonalAssistant.jsx'
 import './App.css'
@@ -28,7 +25,17 @@ function App() {
   const [openBrand, setOpenBrand] = useState(() => localStorage.getItem('openBrand') || '')
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [view, setView] = useState('dashboard')
-  const quotes = ["Let's get to work", 'Ready when you are', 'What next?']
+  const [loggedIn, setLoggedIn] = useState(() => localStorage.getItem('loggedIn') === 'true')
+  const [username, setUsername] = useState('')
+  const [password, setPassword] = useState('')
+  const authHeader = useRef('')
+  const [linkedAccounts, setLinkedAccounts] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('linkedAccounts') || '[]')
+    } catch {
+      return []
+    }
+  })
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark')
@@ -46,8 +53,8 @@ function App() {
   async function loadData() {
     try {
       const [qRes, hRes] = await Promise.all([
-        fetch('/api/queue'),
-        fetch('/api/logs')
+        fetch('/api/queue', { headers: authHeader.current ? { Authorization: authHeader.current } : {} }),
+        fetch('/api/logs', { headers: authHeader.current ? { Authorization: authHeader.current } : {} })
       ])
       setQueue(await qRes.json())
       setHistory(await hRes.json())
@@ -75,9 +82,11 @@ function App() {
     setMessages(m => [...m, { role: 'user', content: text, timestamp: new Date().toISOString() }])
     setInput('')
     try {
+      const headers = { 'Content-Type': 'application/json' }
+      if (authHeader.current) headers.Authorization = authHeader.current
       const res = await fetch('/api/chat', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({ message: text })
       })
       const data = await res.json()
@@ -94,8 +103,42 @@ function App() {
     const form = new FormData()
     form.append('project', brand)
     for (const f of files) form.append('file', f)
-    await fetch('/api/upload', { method: 'POST', body: form })
+    const headers = authHeader.current ? { Authorization: authHeader.current } : {}
+    await fetch('/api/upload', { method: 'POST', body: form, headers })
     e.target.value = ''
+  }
+
+  function linkAccount(name) {
+    setLinkedAccounts(acc => {
+      if (acc.includes(name)) return acc
+      const updated = [...acc, name]
+      localStorage.setItem('linkedAccounts', JSON.stringify(updated))
+      return updated
+    })
+  }
+
+  function handleLogin(e) {
+    e.preventDefault()
+    if (username === 'logan' && password === 'AllDay21!!!') {
+      setLoggedIn(true)
+      localStorage.setItem('loggedIn', 'true')
+      authHeader.current = 'Basic ' + btoa(`${username}:${password}`)
+    } else {
+      alert('Invalid credentials')
+    }
+  }
+
+  if (!loggedIn) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
+        <form onSubmit={handleLogin} className="bg-white dark:bg-gray-800 p-6 rounded shadow space-y-4">
+          <div className="text-lg font-semibold text-center">Log in</div>
+          <input value={username} onChange={e => setUsername(e.target.value)} placeholder="Username" className="w-full border p-2 rounded text-sm bg-transparent" />
+          <input value={password} onChange={e => setPassword(e.target.value)} type="password" placeholder="Password" className="w-full border p-2 rounded text-sm bg-transparent" />
+          <button type="submit" className="w-full bg-blue-500 text-white py-2 rounded">Login</button>
+        </form>
+      </div>
+    )
   }
 
   return (
@@ -104,45 +147,20 @@ function App() {
         <button onClick={() => setSidebarOpen(!sidebarOpen)}><Bars3Icon className="w-6 h-6" /></button>
         <button onClick={() => setTheme(t => t === 'light' ? 'dark' : 'light')} className="text-sm">Toggle {theme === 'light' ? 'Dark' : 'Light'} Mode</button>
       </header>
-      <aside className={`fixed sm:relative z-20 inset-y-0 left-0 w-64 bg-gray-800 text-white flex flex-col p-4 space-y-4 transition-all duration-300 ease-in-out ${sidebarOpen ? 'translate-x-0' : '-translate-x-full sm:translate-x-0'}`}>
-        <div>
-          <h1 className="text-xl font-bold">Welcome Logan 👋</h1>
-          <p className="text-sm text-gray-300">{quotes[new Date().getSeconds() % quotes.length]}</p>
-        </div>
-        <nav className="flex-1 space-y-2 text-sm">
-          {brands.map(b => (
-            <div key={b.key} className="space-y-1">
-              <button
-                className="w-full flex items-center justify-between font-semibold hover:bg-gray-700 rounded px-2 py-1 transition-all"
-                onClick={() => setOpenBrand(o => (o === b.key ? '' : b.key))}
-              >
-                <span onClick={() => setBrand(b.key)}>{b.name}</span>
-                {openBrand === b.key ? (
-                  <ChevronDownIcon className="w-4 h-4" />
-                ) : (
-                  <ChevronRightIcon className="w-4 h-4" />
-                )}
-              </button>
-              <ul
-                className={`${openBrand === b.key ? 'max-h-40' : 'max-h-0'} overflow-hidden transition-all ml-4 text-xs space-y-1`}
-              >
-                <li>Slides</li>
-                <li>Captions</li>
-                <li>Saved Prompts</li>
-                <li>Uploads</li>
-              </ul>
-            </div>
-          ))}
-          <button
-            onClick={addProject}
-            className="w-full flex items-center gap-1 font-semibold hover:bg-gray-700 rounded px-2 py-1 transition-all"
-          >
-            <PlusIcon className="w-4 h-4" /> Add Project
-          </button>
-          <button onClick={() => setView('assistant')} className="text-left w-full">Personal Assistant Mode</button>
-        </nav>
-        <button onClick={() => setTheme(t => t === 'light' ? 'dark' : 'light')} className="text-sm mt-auto hidden sm:block">Toggle {theme === 'light' ? 'Dark' : 'Light'} Mode</button>
-      </aside>
+      <Sidebar
+        brands={brands}
+        openBrand={openBrand}
+        setOpenBrand={setOpenBrand}
+        setBrand={setBrand}
+        addProject={addProject}
+        setView={setView}
+        theme={theme}
+        setTheme={setTheme}
+        linkedAccounts={linkedAccounts}
+        linkAccount={linkAccount}
+        sidebarOpen={sidebarOpen}
+        setSidebarOpen={setSidebarOpen}
+      />
       {sidebarOpen && <div className="fixed inset-0 bg-black bg-opacity-50 sm:hidden" onClick={() => setSidebarOpen(false)}></div>}
       <main className="flex-1 p-4 flex flex-col gap-4 overflow-y-auto">
         {view === 'assistant' ? (
