@@ -13,6 +13,12 @@ const DEFAULT_BRANDS = [
   { key: 'app_304', name: '304 App' },
 ]
 
+const GREETINGS = [
+  "What's up, Logan?",
+  'Welcome Logan!',
+  'Hello Logan!'
+]
+
 function App() {
   const [brands, setBrands] = useState(DEFAULT_BRANDS)
   const [brand, setBrand] = useState('remote100k')
@@ -29,6 +35,7 @@ function App() {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const authHeader = useRef('')
+  const greetingRef = useRef(GREETINGS[Math.floor(Math.random() * GREETINGS.length)])
   const [linkedAccounts, setLinkedAccounts] = useState(() => {
     try {
       return JSON.parse(localStorage.getItem('linkedAccounts') || '[]')
@@ -169,6 +176,9 @@ function App() {
           <>
             <div className="flex-1 bg-white dark:bg-gray-800 rounded-lg shadow-sm flex flex-col overflow-hidden">
               <div className="flex-1 overflow-y-auto p-4 space-y-4 text-sm">
+                {messages.length === 0 && (
+                  <div className="text-center text-gray-500 py-10">{greetingRef.current}</div>
+                )}
                 {messages.map((m, i) => (
                   <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                     <div className={`max-w-sm px-3 py-2 rounded-xl shadow-sm ${m.role === 'user' ? 'bg-blue-100 text-gray-900' : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100'}`}>
@@ -216,7 +226,7 @@ function App() {
       <AgentStatus />
       <button
         onClick={addProject}
-        className="fixed bottom-4 right-4 bg-blue-500 text-white rounded-full w-12 h-12 flex items-center justify-center shadow-lg sm:hidden z-20"
+        className="fixed bottom-20 right-4 bg-blue-500 text-white rounded-full w-12 h-12 flex items-center justify-center shadow-lg sm:hidden z-50"
       >
         <PlusIcon className="w-6 h-6" />
       </button>
