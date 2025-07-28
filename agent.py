@@ -108,31 +108,7 @@ class AgentRequestHandler(http.server.SimpleHTTPRequestHandler):
             self.respond_json(mem)
         else:
             self.send_error(HTTPStatus.NOT_FOUND, f"Memory for '{brand}' not found")
-        def handle_post_chat(self):
-    try:        content_length = int(self.headers.get('Content-Length', 0))
-        body = self.rfile.read(content_length).decode()
-        self.respond_json({"status": "received", "echo": body})
-    except Exception as e:
-        self.send_error(500, f"Error handling request: {str(e)}")
-        try:
-            content_length = int(self.headers.get('Content-Length', 0))
-            body = self.rfile.read(content_length)
-            data = json.loads(body or b'{}')
-            command = data.get("command")
-        except Exception:
-            self.send_error(HTTPStatus.BAD_REQUEST, "Invalid JSON payload")
-            return
-        if not command:
-            self.send_error(HTTPStatus.BAD_REQUEST, "Missing 'command' field")
-            return
-        # Append to queue with timestamp
-        queue_path = LOGS_DIR / "queue.json"
-        queue = load_json(queue_path, default=[])
-        timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
-        queue.append({"task": command, "timestamp": timestamp})
-        save_json(queue_path, queue)
-        self.respond_json({"status": "queued", "timestamp": timestamp})
-    def handle_post_chat(self):
+      def handle_post_chat(self):
         if not self.is_authorized():
             self.send_response(HTTPStatus.UNAUTHORIZED)
             self.send_header("WWW-Authenticate", 'Basic realm="Login required"')
@@ -141,9 +117,9 @@ class AgentRequestHandler(http.server.SimpleHTTPRequestHandler):
         try:
             content_length = int(self.headers.get('Content-Length', 0))
             body = self.rfile.read(content_length).decode()
-            self.respond_json({"status": "received", "body": body})
+            self.respond_json({"status": "received", "echo": body})
         except Exception as e:
-            self.send_error(HTTPStatus.INTERNAL_SERVER_ERROR, f"Error: {e}")
+            self.send_error(500, f"Error handling request: {e}")
 
     def handle_post_upload(self):
         # Parse multipart form data
