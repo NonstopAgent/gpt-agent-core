@@ -123,6 +123,20 @@ def chat() -> 'flask.Response':
     return jsonify({'response': reply, 'timestamp': record['timestamp']})
 
 
+@app.route('/api/image', methods=['POST'])
+def generate_image() -> 'flask.Response':
+    """Generate an image using the ImageGeneratorTool."""
+    data = request.get_json(force=True)
+    prompt = (data.get('prompt') or '').strip()
+    if not prompt:
+        return jsonify({'error': 'Empty prompt'}), 400
+    try:
+        url = asyncio.run(agent.use_tool('image', {'prompt': prompt}))
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    return jsonify({'url': url})
+
+
 @app.route('/api/queue', methods=['GET'])
 def get_queue() -> 'flask.Response':
     """Return queued tasks."""

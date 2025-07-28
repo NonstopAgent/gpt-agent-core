@@ -34,6 +34,7 @@ function App() {
   const [loggedIn, setLoggedIn] = useState(() => localStorage.getItem('loggedIn') === 'true')
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
+  const [imagePrompt, setImagePrompt] = useState('')
   const authHeader = useRef('')
   const greetingRef = useRef(GREETINGS[Math.floor(Math.random() * GREETINGS.length)])
   const [linkedAccounts, setLinkedAccounts] = useState(() => {
@@ -99,6 +100,30 @@ function App() {
       const data = await res.json()
       setMessages(m => [...m, { role: 'assistant', content: data.response, timestamp: data.timestamp }])
       loadData()
+    } catch {
+      setMessages(m => [...m, { role: 'assistant', content: 'Error contacting server.' }])
+    }
+  }
+
+  async function sendImage() {
+    const prompt = imagePrompt.trim()
+    if (!prompt) return
+    setImagePrompt('')
+    setMessages(m => [...m, { role: 'user', content: prompt, timestamp: new Date().toISOString() }])
+    try {
+      const headers = { 'Content-Type': 'application/json' }
+      if (authHeader.current) headers.Authorization = authHeader.current
+      const res = await fetch('/api/image', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ prompt })
+      })
+      const data = await res.json()
+      if (data.url) {
+        setMessages(m => [...m, { role: 'assistant', content: "Here's your generated image.", imageUrl: data.url, timestamp: new Date().toISOString() }])
+      } else {
+        setMessages(m => [...m, { role: 'assistant', content: data.error || 'Error generating image.' }])
+      }
     } catch {
       setMessages(m => [...m, { role: 'assistant', content: 'Error contacting server.' }])
     }
@@ -182,26 +207,41 @@ function App() {
                 {messages.map((m, i) => (
                   <div key={i} className={`w-full ${m.role === 'user' ? 'bg-user' : 'bg-assistant'} py-3 px-4 text-sm`}>
                     <div className="max-w-2xl mx-auto space-y-1 whitespace-pre-wrap">
-                      <div className="chat-message-content">{m.content}</div>
+                  <div className="chat-message-content">{m.content}</div>
+                  {m.imageUrl && (
+                    <img src={m.imageUrl} alt="generated" className="mt-2 rounded" />
+                  )}
                       <div className="text-[10px] text-gray-500 text-right">{new Date(m.timestamp).toLocaleTimeString()}</div>
                     </div>
                   </div>
                 ))}
                 <div ref={messagesEndRef} />
               </div>
-              <div className="p-2 bg-white dark:bg-gray-900 sticky bottom-0 flex gap-2">
-                <textarea
-                  value={input}
-                  onChange={e => setInput(e.target.value)}
-                  onInput={e => { e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px'; }}
-                  onKeyDown={e => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), send())}
-                  placeholder="Send a message"
-                  rows={1}
-                  className="chat-input flex-1 border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-2 text-sm bg-transparent focus:outline-none"
-                />
-                <button onClick={send} className="bg-blue-500 text-white p-2 rounded-lg shadow-sm self-end">
-                  <PaperAirplaneIcon className="w-5 h-5" />
-                </button>
+              <div className="p-2 bg-white dark:bg-gray-900 sticky bottom-0">
+                <div className="flex gap-2">
+                  <textarea
+                    value={input}
+                    onChange={e => setInput(e.target.value)}
+                    onInput={e => { e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px'; }}
+                    onKeyDown={e => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), send())}
+                    placeholder="Send a message"
+                    rows={1}
+                    className="chat-input flex-1 border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-2 text-sm bg-transparent focus:outline-none"
+                  />
+                  <button onClick={send} className="bg-blue-500 text-white p-2 rounded-lg shadow-sm self-end">
+                    <PaperAirplaneIcon className="w-5 h-5" />
+                  </button>
+                </div>
+                <div className="flex gap-2 mt-2">
+                  <input
+                    value={imagePrompt}
+                    onChange={e => setImagePrompt(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), sendImage())}
+                    placeholder="Image prompt"
+                    className="flex-1 border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-1 text-sm bg-transparent focus:outline-none"
+                  />
+                  <button onClick={sendImage} className="bg-green-600 text-white px-3 rounded-lg">Generate</button>
+                </div>
               </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 overflow-y-auto">
