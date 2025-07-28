@@ -4,19 +4,20 @@ import {
   ChevronDownIcon,
   ChevronRightIcon,
 } from '@heroicons/react/24/outline'
-import { PaperAirplaneIcon } from '@heroicons/react/24/solid'
+import { PaperAirplaneIcon, PlusIcon } from '@heroicons/react/24/solid'
 import AgentStatus from './AgentStatus.jsx'
 import PersonalAssistant from './PersonalAssistant.jsx'
 import './App.css'
 import './index.css'
 
-const BRANDS = [
+const DEFAULT_BRANDS = [
   { key: 'remote100k', name: 'Remote100K' },
   { key: 'tradeview_ai', name: 'Tradeview AI' },
-  { key: 'app_304', name: '304 App' }
+  { key: 'app_304', name: '304 App' },
 ]
 
 function App() {
+  const [brands, setBrands] = useState(DEFAULT_BRANDS)
   const [brand, setBrand] = useState('remote100k')
   const [messages, setMessages] = useState([])
   const messagesEndRef = useRef(null)
@@ -53,6 +54,13 @@ function App() {
     } catch {
       console.error('Failed loading queue/history')
     }
+  }
+
+  function addProject() {
+    const name = prompt('Project name?')
+    if (!name) return
+    const key = name.toLowerCase().replace(/\s+/g, '_')
+    setBrands(b => [...b, { key, name }])
   }
 
   useEffect(() => { loadData() }, [])
@@ -102,7 +110,7 @@ function App() {
           <p className="text-sm text-gray-300">{quotes[new Date().getSeconds() % quotes.length]}</p>
         </div>
         <nav className="flex-1 space-y-2 text-sm">
-          {BRANDS.map(b => (
+          {brands.map(b => (
             <div key={b.key} className="space-y-1">
               <button
                 className="w-full flex items-center justify-between font-semibold hover:bg-gray-700 rounded px-2 py-1 transition-all"
@@ -125,12 +133,18 @@ function App() {
               </ul>
             </div>
           ))}
+          <button
+            onClick={addProject}
+            className="w-full flex items-center gap-1 font-semibold hover:bg-gray-700 rounded px-2 py-1 transition-all"
+          >
+            <PlusIcon className="w-4 h-4" /> Add Project
+          </button>
           <button onClick={() => setView('assistant')} className="text-left w-full">Personal Assistant Mode</button>
         </nav>
         <button onClick={() => setTheme(t => t === 'light' ? 'dark' : 'light')} className="text-sm mt-auto hidden sm:block">Toggle {theme === 'light' ? 'Dark' : 'Light'} Mode</button>
       </aside>
       {sidebarOpen && <div className="fixed inset-0 bg-black bg-opacity-50 sm:hidden" onClick={() => setSidebarOpen(false)}></div>}
-      <main className="flex-1 p-4 flex flex-col gap-4 overflow-hidden">
+      <main className="flex-1 p-4 flex flex-col gap-4 overflow-y-auto">
         {view === 'assistant' ? (
           <PersonalAssistant />
         ) : (
@@ -183,10 +197,10 @@ function App() {
       </main>
       <AgentStatus />
       <button
-        onClick={() => setSidebarOpen(true)}
-        className="fixed bottom-4 right-4 bg-blue-500 text-white rounded-full w-12 h-12 flex items-center justify-center shadow-lg sm:hidden"
+        onClick={addProject}
+        className="fixed bottom-4 right-4 bg-blue-500 text-white rounded-full w-12 h-12 flex items-center justify-center shadow-lg sm:hidden z-20"
       >
-        +
+        <PlusIcon className="w-6 h-6" />
       </button>
     </div>
   )
