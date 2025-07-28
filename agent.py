@@ -3,6 +3,8 @@ import os
 import json
 from datetime import datetime
 from openai import OpenAI
+from tools.image_generator import ImageGeneratorTool
+import asyncio
 from functools import wraps
 from werkzeug.utils import secure_filename
 
@@ -40,6 +42,24 @@ def _save_memory(data):
         json.dump(data, f, indent=2)
 
 chat_memory = _load_memory()
+
+
+class ToolAgent:
+    """Simple container for callable tools."""
+
+    def __init__(self):
+        self.tools = {
+            ImageGeneratorTool.name: ImageGeneratorTool(),
+        }
+
+    async def use_tool(self, name: str, params: dict):
+        tool = self.tools.get(name)
+        if not tool:
+            raise ValueError(f"Unknown tool: {name}")
+        return await tool(**params)
+
+
+agent = ToolAgent()
 
 
 @app.route('/api/chat', methods=['POST'])
