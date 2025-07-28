@@ -1,7 +1,14 @@
 import { useState } from 'react'
-import { ChevronDownIcon, ChevronRightIcon, PlusIcon } from '@heroicons/react/24/outline'
+import {
+  ChevronDownIcon,
+  ChevronRightIcon,
+  PlusIcon,
+  FolderIcon,
+  DocumentTextIcon,
+} from '@heroicons/react/24/outline'
 
 const SOCIALS = ['TikTok', 'Instagram', 'YouTube', 'Gmail']
+const PROJECT_ITEMS = ['Slides', 'Captions', 'Chat Logs', 'Media Uploads']
 
 export default function Sidebar({
   brands,
@@ -17,6 +24,7 @@ export default function Sidebar({
   sidebarOpen,
 }) {
   const [showLinks, setShowLinks] = useState(false)
+  const [active, setActive] = useState({ project: '', item: '' })
   return (
     <aside className={`fixed sm:relative z-20 inset-y-0 left-0 w-64 bg-gray-800 text-white flex flex-col p-4 space-y-4 transition-all duration-300 ease-in-out overflow-y-auto ${sidebarOpen ? 'translate-x-0' : '-translate-x-full sm:translate-x-0'}`}>\
       <div>
@@ -26,10 +34,16 @@ export default function Sidebar({
         {brands.map(b => (
           <div key={b.key} className="space-y-1">
             <button
-              className="w-full flex items-center justify-between font-semibold hover:bg-gray-700 rounded px-2 py-1 transition-all"
               onClick={() => setOpenBrand(o => (o === b.key ? '' : b.key))}
+              className="w-full flex items-center justify-between px-2 py-1 rounded hover:bg-gray-700 transition"
             >
-              <span onClick={() => setBrand(b.key)}>{b.name}</span>
+              <span
+                className="flex items-center gap-2"
+                onClick={() => setBrand(b.key)}
+              >
+                <FolderIcon className="w-5 h-5" />
+                {b.name}
+              </span>
               {openBrand === b.key ? (
                 <ChevronDownIcon className="w-4 h-4" />
               ) : (
@@ -37,12 +51,26 @@ export default function Sidebar({
               )}
             </button>
             <ul
-              className={`${openBrand === b.key ? 'max-h-40' : 'max-h-0'} overflow-hidden transition-all ml-4 text-xs space-y-1`}
+              className={`${openBrand === b.key ? 'max-h-60' : 'max-h-0'} overflow-hidden transition-all ml-7 space-y-1`}
             >
-              <li>Slides</li>
-              <li>Captions</li>
-              <li>Saved Prompts</li>
-              <li>Uploads</li>
+              {PROJECT_ITEMS.map(item => (
+                <li key={item}>
+                  <button
+                    onClick={() => {
+                      setBrand(b.key)
+                      setActive({ project: b.key, item })
+                    }}
+                    className={`flex items-center gap-2 w-full px-2 py-1 rounded hover:bg-gray-700 ${
+                      active.project === b.key && active.item === item
+                        ? 'bg-gray-700 text-white'
+                        : 'text-gray-300'
+                    }`}
+                  >
+                    <DocumentTextIcon className="w-4 h-4" />
+                    <span>{item}</span>
+                  </button>
+                </li>
+              ))}
             </ul>
           </div>
         ))}
