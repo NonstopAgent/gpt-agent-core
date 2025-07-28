@@ -134,17 +134,23 @@ class AgentRequestHandler(http.server.SimpleHTTPRequestHandler):
             length = int(self.headers.get('Content-Length', 0))
             body = json.loads(self.rfile.read(length).decode())
             project = body.get('project')
-            messages = body.get('messages', [])
-            if not project or not isinstance(messages, list):
+            message = body.get('message')
+            if not project or not isinstance(message, str):
                 self.send_error(HTTPStatus.BAD_REQUEST, "Invalid payload")
                 return
 
             store = load_memory_store()
             mem = store.get(project, {"messages": [], "instructions": ""})
+            conversation = mem.get("messages", [])
+
+            # append new user message to conversation
+            conversation.append({"role": "user", "content": message})
+
+            # build prompt with system instructions
             prompt_messages = []
             if mem.get("instructions"):
                 prompt_messages.append({"role": "system", "content": mem["instructions"]})
-            prompt_messages.extend(messages)
+            prompt_messages.extend(conversation)
 
             reply_text = ""
             try:
@@ -156,10 +162,13 @@ class AgentRequestHandler(http.server.SimpleHTTPRequestHandler):
             except Exception as api_err:
                 reply_text = f"Error: {api_err}"
 
-            # update memory with new conversation
-            mem["messages"] = messages + [{"role": "assistant", "content": reply_text}]
+            # update memory with assistant response
+            conversation.append({"role": "assistant", "content": reply_text})
+            mem["messages"] = conversation
             store[project] = mem
             save_memory_store(store)
+
+            print(f"✅ Memory updated for {project} – {len(conversation)} messages")
 
             self.respond_json({"reply": reply_text})
         except Exception as e:
