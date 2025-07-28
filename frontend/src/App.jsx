@@ -27,7 +27,7 @@ function App() {
   const [input, setInput] = useState('')
   const [queue, setQueue] = useState([])
   const [history, setHistory] = useState([])
-  const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'light')
+  const [darkMode, setDarkMode] = useState(() => localStorage.getItem('theme') === 'dark')
   const [openBrand, setOpenBrand] = useState(() => localStorage.getItem('openBrand') || '')
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [view, setView] = useState('dashboard')
@@ -45,9 +45,8 @@ function App() {
   })
 
   useEffect(() => {
-    document.documentElement.classList.toggle('dark', theme === 'dark')
-    localStorage.setItem('theme', theme)
-  }, [theme])
+    localStorage.setItem('theme', darkMode ? 'dark' : 'light')
+  }, [darkMode])
 
   useEffect(() => {
     if (openBrand) {
@@ -137,22 +136,25 @@ function App() {
 
   if (!loggedIn) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
-        <form onSubmit={handleLogin} className="bg-white dark:bg-gray-800 p-6 rounded shadow space-y-4">
+      <div className={darkMode ? 'dark' : ''}>
+        <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
+          <form onSubmit={handleLogin} className="bg-white dark:bg-gray-800 p-6 rounded shadow space-y-4">
           <div className="text-lg font-semibold text-center">Log in</div>
           <input value={username} onChange={e => setUsername(e.target.value)} placeholder="Username" className="w-full border p-2 rounded text-sm bg-transparent" />
           <input value={password} onChange={e => setPassword(e.target.value)} type="password" placeholder="Password" className="w-full border p-2 rounded text-sm bg-transparent" />
           <button type="submit" className="w-full bg-blue-500 text-white py-2 rounded">Login</button>
         </form>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen flex flex-col sm:flex-row bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 font-sans">
+    <div className={darkMode ? 'dark' : ''}>
+      <div className="min-h-screen flex flex-col sm:flex-row bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 font-sans">
       <header className="flex items-center justify-between p-4 shadow sm:hidden">
         <button onClick={() => setSidebarOpen(!sidebarOpen)}><Bars3Icon className="w-6 h-6" /></button>
-        <button onClick={() => setTheme(t => t === 'light' ? 'dark' : 'light')} className="text-sm">Toggle {theme === 'light' ? 'Dark' : 'Light'} Mode</button>
+        <button onClick={() => setDarkMode(d => !d)} className="text-sm">{darkMode ? 'Light' : 'Dark'} Mode</button>
       </header>
       <Sidebar
         brands={brands}
@@ -161,8 +163,8 @@ function App() {
         setBrand={setBrand}
         addProject={addProject}
         setView={setView}
-        theme={theme}
-        setTheme={setTheme}
+        theme={darkMode ? 'dark' : 'light'}
+        setTheme={() => setDarkMode(d => !d)}
         linkedAccounts={linkedAccounts}
         linkAccount={linkAccount}
         sidebarOpen={sidebarOpen}
@@ -232,6 +234,7 @@ function App() {
       >
         <PlusIcon className="w-6 h-6" />
       </button>
+      </div>
     </div>
   )
 }

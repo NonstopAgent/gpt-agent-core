@@ -74,7 +74,7 @@ export default function Sidebar({
         </div>
         <button onClick={() => setView('assistant')} className="text-left w-full">Personal Assistant Mode</button>
       </nav>
-      <button onClick={() => setTheme(t => t === 'light' ? 'dark' : 'light')} className="text-sm mt-auto hidden sm:block">Toggle {theme === 'light' ? 'Dark' : 'Light'} Mode</button>
+      <button onClick={() => setTheme()} className="text-sm mt-auto hidden sm:block">{theme === 'dark' ? 'Light' : 'Dark'} Mode</button>
     </aside>
   )
 }
