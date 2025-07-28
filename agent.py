@@ -110,17 +110,26 @@ class AgentRequestHandler(http.server.SimpleHTTPRequestHandler):
             self.send_error(HTTPStatus.NOT_FOUND, f"Memory for '{brand}' not found")
 
     def handle_post_chat(self):
-        if not self.is_authorized():
-            self.send_response(HTTPStatus.UNAUTHORIZED)
-            self.send_header("WWW-Authenticate", 'Basic realm="Login required"')
-            self.end_headers()
-            return
         try:
             content_length = int(self.headers.get('Content-Length', 0))
-            body = self.rfile.read(content_length).decode()
-            self.respond_json({"status": "received", "echo": body})
+            post_data = self.rfile.read(content_length)
+            data = json.loads(post_data)
+
+            message = data.get("message", "")
+            print(f"Received message: {message}")
+
+            # Replace this with your real response generation logic later
+            response = {"reply": f"Echo: {message}"}
+
+            self.send_response(200)
+            self.send_header('Content-type', 'application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps(response).encode())
+
         except Exception as e:
-            self.send_error(500, f"Error handling request: {e}")
+            self.send_response(500)
+            self.end_headers()
+            self.wfile.write(json.dumps({"error": str(e)}).encode())
 
     def handle_post_upload(self):
         # Parse multipart form data
