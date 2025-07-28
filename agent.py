@@ -1,5 +1,8 @@
 from flask import Flask, send_from_directory, request, jsonify
 import os
+import json
+from datetime import datetime
+from openai import OpenAI
 
 # Path to the frontend files. Originally this project expected a Vite build in
 # ``frontend/dist`` but the repository only contains plain HTML and JS directly
@@ -11,12 +14,42 @@ app = Flask(__name__, static_folder=FRONTEND_DIST, static_url_path='')
 
 @app.route('/api/chat', methods=['POST'])
 def chat() -> 'flask.Response':
-    """Simple chat endpoint returning a fake response."""
+    """Chat endpoint that proxies messages to OpenAI and returns the reply."""
     data = request.get_json(force=True)
-    message = data.get('message', '')
-    if not message:
-        return jsonify({'error': 'Missing message'}), 400
-    return jsonify({'reply': f'You said: {message}'})
+    user_message = (data.get('message') or '').strip()
+    if not user_message:
+        return jsonify({'error': 'Empty message'}), 400
+
+    client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+    model = os.getenv('OPENAI_MODEL', 'gpt-3.5-turbo')
+    try:
+        completion = client.chat.completions.create(
+            model=model,
+            messages=[
+                {
+                    'role': 'system',
+                    'content': "You are Logan's custom business assistant Agent."
+                },
+                {'role': 'user', 'content': user_message},
+            ],
+        )
+        reply = completion.choices[0].message.content
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+    history_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'chat_history.json')
+    record = {
+        'timestamp': datetime.now().isoformat(),
+        'user': user_message,
+        'agent': reply,
+    }
+    try:
+        with open(history_path, 'a', encoding='utf-8') as f:
+            f.write(json.dumps(record) + "\n")
+    except Exception:
+        pass
+
+    return jsonify({'response': reply})
 
 
 @app.route('/', defaults={'path': ''})
