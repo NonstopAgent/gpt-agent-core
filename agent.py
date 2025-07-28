@@ -44,6 +44,23 @@ def _save_memory(data):
 chat_memory = _load_memory()
 
 
+def _is_image_request(text: str) -> bool:
+    """Return True if the user text appears to request image generation."""
+    t = text.lower()
+    keywords = [
+        'draw',
+        'image',
+        'picture',
+        'logo',
+        'sketch',
+    ]
+    if any(k in t for k in keywords):
+        return True
+    if ('make' in t or 'create' in t) and ('image' in t or 'picture' in t or 'logo' in t):
+        return True
+    return False
+
+
 class ToolAgent:
     """Simple container for callable tools."""
 
@@ -75,16 +92,26 @@ def chat() -> 'flask.Response':
     conversation = mem.get('messages', [])
     conversation.append({'role': 'user', 'content': user_message})
 
-    client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
-    model = os.getenv('OPENAI_MODEL', 'gpt-3.5-turbo')
-    try:
-        completion = client.chat.completions.create(
-            model=model,
-            messages=[{'role': 'system', 'content': mem.get('instructions', '')}] + conversation[-10:],
-        )
-        reply = completion.choices[0].message.content
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+    reply = None
+    image_url = None
+
+    if _is_image_request(user_message):
+        try:
+            image_url = asyncio.run(agent.use_tool(ImageGeneratorTool.name, {'prompt': user_message}))
+            reply = image_url
+        except Exception as e:
+            reply = f"Error generating image: {e}"
+    else:
+        client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+        model = os.getenv('OPENAI_MODEL', 'gpt-3.5-turbo')
+        try:
+            completion = client.chat.completions.create(
+                model=model,
+                messages=[{'role': 'system', 'content': mem.get('instructions', '')}] + conversation[-10:],
+            )
+            reply = completion.choices[0].message.content
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
 
     conversation.append({'role': 'assistant', 'content': reply})
     mem['messages'] = conversation[-20:]
@@ -120,7 +147,10 @@ def chat() -> 'flask.Response':
     except Exception:
         pass
 
-    return jsonify({'response': reply, 'timestamp': record['timestamp']})
+    resp = {'response': reply, 'timestamp': record['timestamp']}
+    if image_url:
+        resp['image_url'] = image_url
+    return jsonify(resp)
 
 
 @app.route('/api/queue', methods=['GET'])
