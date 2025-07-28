@@ -108,7 +108,8 @@ class AgentRequestHandler(http.server.SimpleHTTPRequestHandler):
             self.respond_json(mem)
         else:
             self.send_error(HTTPStatus.NOT_FOUND, f"Memory for '{brand}' not found")
-      def handle_post_chat(self):
+
+    def handle_post_chat(self):
         if not self.is_authorized():
             self.send_response(HTTPStatus.UNAUTHORIZED)
             self.send_header("WWW-Authenticate", 'Basic realm="Login required"')
