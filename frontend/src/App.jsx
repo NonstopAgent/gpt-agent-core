@@ -1,5 +1,10 @@
-import { useEffect, useState } from 'react'
-import { Bars3Icon, ChevronDownIcon, ChevronRightIcon } from '@heroicons/react/24/outline'
+import { useEffect, useRef, useState } from 'react'
+import {
+  Bars3Icon,
+  ChevronDownIcon,
+  ChevronRightIcon,
+} from '@heroicons/react/24/outline'
+import { PaperAirplaneIcon } from '@heroicons/react/24/solid'
 import AgentStatus from './AgentStatus.jsx'
 import PersonalAssistant from './PersonalAssistant.jsx'
 import './App.css'
@@ -14,6 +19,7 @@ const BRANDS = [
 function App() {
   const [brand, setBrand] = useState('remote100k')
   const [messages, setMessages] = useState([])
+  const messagesEndRef = useRef(null)
   const [input, setInput] = useState('')
   const [queue, setQueue] = useState([])
   const [history, setHistory] = useState([])
@@ -51,6 +57,10 @@ function App() {
 
   useEffect(() => { loadData() }, [])
 
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages])
+
   async function send() {
     const text = input.trim()
     if (!text) return
@@ -81,12 +91,12 @@ function App() {
   }
 
   return (
-    <div className="h-full flex flex-col sm:flex-row bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
-      <header className="flex items-center justify-between p-2 sm:hidden">
+    <div className="min-h-screen flex flex-col sm:flex-row bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 font-sans">
+      <header className="flex items-center justify-between p-4 shadow sm:hidden">
         <button onClick={() => setSidebarOpen(!sidebarOpen)}><Bars3Icon className="w-6 h-6" /></button>
         <button onClick={() => setTheme(t => t === 'light' ? 'dark' : 'light')} className="text-sm">Toggle {theme === 'light' ? 'Dark' : 'Light'} Mode</button>
       </header>
-      <aside className={`fixed sm:relative z-20 inset-y-0 left-0 transform bg-gray-800 text-white w-64 flex flex-col p-4 space-y-4 transition-transform ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} sm:translate-x-0`}>
+      <aside className={`fixed sm:relative z-20 inset-y-0 left-0 w-64 bg-gray-800 text-white flex flex-col p-4 space-y-4 transition-all duration-300 ease-in-out ${sidebarOpen ? 'translate-x-0' : '-translate-x-full sm:translate-x-0'}`}>
         <div>
           <h1 className="text-xl font-bold">Welcome Logan 👋</h1>
           <p className="text-sm text-gray-300">{quotes[new Date().getSeconds() % quotes.length]}</p>
@@ -94,11 +104,20 @@ function App() {
         <nav className="flex-1 space-y-2 text-sm">
           {BRANDS.map(b => (
             <div key={b.key} className="space-y-1">
-              <button className="w-full flex items-center justify-between font-semibold" onClick={() => setOpenBrand(o => o === b.key ? '' : b.key)}>
+              <button
+                className="w-full flex items-center justify-between font-semibold hover:bg-gray-700 rounded px-2 py-1 transition-all"
+                onClick={() => setOpenBrand(o => (o === b.key ? '' : b.key))}
+              >
                 <span onClick={() => setBrand(b.key)}>{b.name}</span>
-                {openBrand === b.key ? <ChevronDownIcon className="w-4 h-4" /> : <ChevronRightIcon className="w-4 h-4" />}
+                {openBrand === b.key ? (
+                  <ChevronDownIcon className="w-4 h-4" />
+                ) : (
+                  <ChevronRightIcon className="w-4 h-4" />
+                )}
               </button>
-              <ul className={`${openBrand === b.key ? 'max-h-40' : 'max-h-0'} overflow-hidden transition-all ml-4 text-xs space-y-1`}>
+              <ul
+                className={`${openBrand === b.key ? 'max-h-40' : 'max-h-0'} overflow-hidden transition-all ml-4 text-xs space-y-1`}
+              >
                 <li>Slides</li>
                 <li>Captions</li>
                 <li>Saved Prompts</li>
@@ -111,40 +130,51 @@ function App() {
         <button onClick={() => setTheme(t => t === 'light' ? 'dark' : 'light')} className="text-sm mt-auto hidden sm:block">Toggle {theme === 'light' ? 'Dark' : 'Light'} Mode</button>
       </aside>
       {sidebarOpen && <div className="fixed inset-0 bg-black bg-opacity-50 sm:hidden" onClick={() => setSidebarOpen(false)}></div>}
-      <main className="flex-1 p-4 flex flex-col space-y-4 overflow-hidden">
+      <main className="flex-1 p-4 flex flex-col gap-4 overflow-hidden">
         {view === 'assistant' ? (
           <PersonalAssistant />
         ) : (
           <>
-            <div className="flex-1 border rounded p-2 flex flex-col overflow-hidden">
-              <div className="flex-1 overflow-y-auto space-y-2 text-sm">
+            <div className="flex-1 bg-white dark:bg-gray-800 rounded-lg shadow-sm flex flex-col overflow-hidden">
+              <div className="flex-1 overflow-y-auto p-4 space-y-4 text-sm">
                 {messages.map((m, i) => (
-                  <div key={i} className={m.role === 'assistant' ? 'text-right' : 'text-left'}>
-                    <div>{m.content}</div>
-                    <div className="text-xs text-gray-500">{new Date(m.timestamp).toLocaleTimeString()}</div>
+                  <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                    <div className={`max-w-sm px-3 py-2 rounded-xl shadow-sm ${m.role === 'user' ? 'bg-blue-100 text-gray-900' : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100'}`}>
+                      {m.content}
+                      <div className="mt-1 text-[10px] text-gray-500">{new Date(m.timestamp).toLocaleTimeString()}</div>
+                    </div>
                   </div>
                 ))}
+                <div ref={messagesEndRef} />
               </div>
-              <div className="mt-2 flex sticky bottom-0 bg-gray-100 dark:bg-gray-900 pt-2">
-                <input value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key==='Enter' && send()} placeholder="Ask me anything or give a command..." className="flex-1 border rounded px-2 py-1 text-gray-900" />
-                <button onClick={send} className="ml-2 bg-blue-500 text-white px-4 py-1 rounded">Send</button>
+              <div className="p-2 bg-white dark:bg-gray-900 sticky bottom-0 flex gap-2">
+                <input
+                  value={input}
+                  onChange={e => setInput(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && send()}
+                  placeholder="Ask me anything or give a command..."
+                  className="flex-1 border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-2 text-sm bg-transparent focus:outline-none"
+                />
+                <button onClick={send} className="bg-blue-500 text-white p-2 rounded-lg shadow-sm">
+                  <PaperAirplaneIcon className="w-5 h-5" />
+                </button>
               </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 overflow-y-auto">
-              <section className="border rounded p-2 max-h-40 overflow-y-auto">
+              <section className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 max-h-40 overflow-y-auto">
                 <h2 className="font-semibold mb-1">✍️ Task Queue</h2>
                 <ul className="text-xs space-y-1">
                   {queue.map((q,i)=>(<li key={i}>{q.timestamp} – {q.task}</li>))}
                 </ul>
               </section>
-              <section className="border rounded p-2 max-h-40 overflow-y-auto">
+              <section className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 max-h-40 overflow-y-auto">
                 <h2 className="font-semibold mb-1">✅ Task History</h2>
                 <ul className="text-xs space-y-1">
                   {history.slice().reverse().map((h,i)=>(<li key={i}>{h.timestamp} – {h.task}</li>))}
                 </ul>
               </section>
             </div>
-            <section className="border rounded p-2">
+            <section className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4">
               <h2 className="font-semibold mb-1">Upload Panel</h2>
               <input type="file" multiple onChange={upload} className="text-sm" />
             </section>
@@ -152,6 +182,12 @@ function App() {
         )}
       </main>
       <AgentStatus />
+      <button
+        onClick={() => setSidebarOpen(true)}
+        className="fixed bottom-4 right-4 bg-blue-500 text-white rounded-full w-12 h-12 flex items-center justify-center shadow-lg sm:hidden"
+      >
+        +
+      </button>
     </div>
   )
 }

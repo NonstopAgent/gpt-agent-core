@@ -22,7 +22,7 @@ export default function AgentStatus() {
   }
 
   return (
-    <div className="fixed bottom-4 right-4 bg-white dark:bg-gray-800 shadow-lg rounded p-3 text-sm w-64">
+    <div className="fixed bottom-4 left-4 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm shadow-lg rounded-lg p-3 text-sm w-64 transition-all">
       <div className="font-semibold mb-1">🧠 Agent Working Now</div>
       <div className="text-xs">{status.task}</div>
       <div className="text-xs">Status: {status.status}</div>
