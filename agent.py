@@ -134,45 +134,49 @@ class AgentRequestHandler(http.server.SimpleHTTPRequestHandler):
             length = int(self.headers.get('Content-Length', 0))
             body = json.loads(self.rfile.read(length).decode())
             project = body.get('project')
-            message = body.get('message')
-            if not project or not isinstance(message, str):
-                self.send_error(HTTPStatus.BAD_REQUEST, "Invalid payload")
+            user_messages = body.get('messages')
+
+            if not project or not user_messages:
+                self.send_error(HTTPStatus.BAD_REQUEST, "Missing project or messages")
                 return
 
-            store = load_memory_store()
-            mem = store.get(project, {"messages": [], "instructions": ""})
-            conversation = mem.get("messages", [])
+            memory_path = MEMORY_DIR / "chat_memory.json"
+            with open(memory_path, "r", encoding="utf-8") as f:
+                memory = json.load(f)
 
-            # append new user message to conversation
-            conversation.append({"role": "user", "content": message})
+            instructions = memory.get(project, {}).get("instructions", "")
+            history = memory.get(project, {}).get("messages", [])
 
-            # build prompt with system instructions
-            prompt_messages = []
-            if mem.get("instructions"):
-                prompt_messages.append({"role": "system", "content": mem["instructions"]})
-            prompt_messages.extend(conversation)
+            messages = ([{"role": "system", "content": instructions}] +
+                        history + user_messages)
 
-            reply_text = ""
             try:
-                resp = client.chat.completions.create(
-                    model=os.environ.get("OPENAI_MODEL", "gpt-3.5-turbo"),
-                    messages=prompt_messages,
+                response = client.chat.completions.create(
+                    model="gpt-4",
+                    messages=messages
                 )
-                reply_text = resp.choices[0].message.content.strip()
-            except Exception as api_err:
-                reply_text = f"Error: {api_err}"
+                reply = response.choices[0].message.content
 
-            # update memory with assistant response
-            conversation.append({"role": "assistant", "content": reply_text})
-            mem["messages"] = conversation
-            store[project] = mem
-            save_memory_store(store)
+                memory.setdefault(project, {}).setdefault("messages", [])
+                memory[project]["messages"] = (
+                    history + user_messages + [{"role": "assistant", "content": reply}]
+                )
 
-            print(f"✅ Memory updated for {project} – {len(conversation)} messages")
+                with open(memory_path, "w", encoding="utf-8") as f:
+                    json.dump(memory, f, indent=2)
 
-            self.respond_json({"reply": reply_text})
+                print(
+                    f"✅ Memory saved for {project} | total: {len(memory[project]['messages'])} messages"
+                )
+
+                self.respond_json({"reply": reply})
+
+            except Exception as e:
+                print("❌ Error in chat:", str(e))
+                self.send_error(500, f"{e}")
         except Exception as e:
-            self.send_error(500, f"Error handling request: {e}")
+            print("❌ Error in chat:", str(e))
+            self.send_error(500, f"{e}")
 
     def handle_post_upload(self):
         # Parse multipart form data
