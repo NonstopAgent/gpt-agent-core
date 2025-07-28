@@ -23,8 +23,16 @@ import urllib.parse
 from pathlib import Path
 from http import HTTPStatus
 import cgi
+import openai
 from dotenv import load_dotenv
+
 load_dotenv()
+
+# Configure OpenAI client using API key from environment
+client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
+# In-memory chat history
+chat_memory = []
 
 # Resolve base directory relative to this script
 BASE_DIR = Path(__file__).resolve().parent
@@ -110,15 +118,34 @@ class AgentRequestHandler(http.server.SimpleHTTPRequestHandler):
             self.send_error(HTTPStatus.NOT_FOUND, f"Memory for '{brand}' not found")
 
     def handle_post_chat(self):
-        if not self.is_authorized():
-            self.send_response(HTTPStatus.UNAUTHORIZED)
-            self.send_header("WWW-Authenticate", 'Basic realm="Login required"')
-            self.end_headers()
-            return
+
+
         try:
             content_length = int(self.headers.get('Content-Length', 0))
-            body = self.rfile.read(content_length).decode()
-            self.respond_json({"status": "received", "echo": body})
+            body_bytes = self.rfile.read(content_length)
+            body = json.loads(body_bytes.decode()) if body_bytes else {}
+            user_message = body.get("message")
+
+            if not user_message:
+                self.send_response(HTTPStatus.BAD_REQUEST)
+                self.end_headers()
+                self.wfile.write(b'{"error": "Missing message"}')
+                return
+
+            # Store user message
+            chat_memory.append({"role": "user", "content": user_message})
+
+            # Build GPT context (last 10 messages)
+            context = [{"role": "system", "content": "You are Logan\u2019s personal business assistant. Help with tasks, content, and commands."}] + chat_memory[-10:]
+
+            response = client.chat.completions.create(
+                model="gpt-4",
+                messages=context
+            )
+            reply = response.choices[0].message.content.strip()
+            chat_memory.append({"role": "assistant", "content": reply})
+
+            self.respond_json({"reply": reply})
         except Exception as e:
             self.send_error(500, f"Error handling request: {e}")
 

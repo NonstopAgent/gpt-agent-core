@@ -100,12 +100,12 @@ document.addEventListener('DOMContentLoaded', () => {
   // Handle chat submissions
   chatForm.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const command = chatInput.value.trim();
-    if (!command) return;
+    const message = chatInput.value.trim();
+    if (!message) return;
     // Append to chat log
     const userMsg = document.createElement('div');
     userMsg.className = 'text-blue-700';
-    userMsg.textContent = `You: ${command}`;
+    userMsg.textContent = `You: ${message}`;
     chatLog.appendChild(userMsg);
     chatLog.scrollTop = chatLog.scrollHeight;
     chatInput.value = '';
@@ -113,12 +113,12 @@ document.addEventListener('DOMContentLoaded', () => {
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ command })
+        body: JSON.stringify({ message })
       });
       const data = await res.json();
       const botMsg = document.createElement('div');
       botMsg.className = 'text-green-700';
-      botMsg.textContent = `Agent: queued at ${data.timestamp}`;
+      botMsg.textContent = `Agent: ${data.reply}`;
       chatLog.appendChild(botMsg);
       chatLog.scrollTop = chatLog.scrollHeight;
       // Refresh status
