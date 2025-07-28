@@ -1,3 +1,32 @@
 #root {
   height: 100%;
 }
+
+/* ChatGPT style message colors */
+:root {
+  --assistant-light: #f7f7f8;
+  --assistant-dark: #444654;
+  --user-light: #e6eaf0;
+  --user-dark: #343541;
+}
+
+.bg-assistant {
+  background-color: var(--assistant-light);
+}
+.dark .bg-assistant {
+  background-color: var(--assistant-dark);
+}
+.bg-user {
+  background-color: var(--user-light);
+}
+.dark .bg-user {
+  background-color: var(--user-dark);
+  color: white;
+}
+
+textarea.chat-input {
+  resize: none;
+  overflow: hidden;
+  min-height: 2.5rem;
+  line-height: 1.5rem;
+}
