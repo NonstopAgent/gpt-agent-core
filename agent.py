@@ -5,7 +5,6 @@ import asyncio
 from datetime import datetime
 from openai import OpenAI
 from tools.image_generator import ImageGeneratorTool
-import asyncio
 from functools import wraps
 from werkzeug.utils import secure_filename
 from tools.web_browser import WebBrowserTool
@@ -43,27 +42,19 @@ def _save_memory(data):
     with open(CHAT_MEMORY_FILE, 'w', encoding='utf-8') as f:
         json.dump(data, f, indent=2)
 
+
+def _is_image_request(text: str) -> bool:
+    """Return True if the user text looks like an image generation request."""
+    lowered = text.lower()
+    triggers = ['generate image', 'draw', 'create image']
+    return any(t in lowered for t in triggers)
+
 class Agent:
-    """Simple container for registered tools."""
+    """Manage available tools and provide a unified async interface."""
 
     def __init__(self) -> None:
-        self.tools = {'web': WebBrowserTool()}
-
-    async def use_tool(self, name: str, params: dict) -> dict:
-        tool = self.tools.get(name)
-        if not tool:
-            raise ValueError(f'Unknown tool: {name}')
-        return await asyncio.to_thread(tool.run, params)
-
-chat_memory = _load_memory()
-agent = Agent()
-
-
-class ToolAgent:
-    """Simple container for callable tools."""
-
-    def __init__(self):
         self.tools = {
+            'web': WebBrowserTool(),
             ImageGeneratorTool.name: ImageGeneratorTool(),
         }
 
@@ -71,10 +62,13 @@ class ToolAgent:
         tool = self.tools.get(name)
         if not tool:
             raise ValueError(f"Unknown tool: {name}")
+        if hasattr(tool, "run"):
+            return await asyncio.to_thread(tool.run, params)
         return await tool(**params)
 
 
-agent = ToolAgent()
+chat_memory = _load_memory()
+agent = Agent()
 
 
 def handle_post_chat(data: dict) -> dict:
@@ -108,13 +102,11 @@ def handle_post_chat(data: dict) -> dict:
     except Exception as e:
         return {'error': str(e)}
 
-    keywords = ['generate image', 'draw']
-    lowered = user_message.lower()
-    if any(k in lowered for k in keywords):
+    if _is_image_request(user_message):
         prompt = user_message
-        for k in keywords:
-            if k in lowered:
-                after = user_message.lower().split(k, 1)[1].strip()
+        for key in ['generate image', 'draw', 'create image']:
+            if key in user_message.lower():
+                after = user_message.lower().split(key, 1)[1].strip()
                 if after:
                     prompt = after
                 break
@@ -169,6 +161,20 @@ def chat() -> 'flask.Response':
     if 'error' in result:
         return jsonify({'error': result['error']}), 400
     return jsonify(result)
+
+
+@app.route('/api/image', methods=['POST'])
+def generate_image_api() -> 'flask.Response':
+    """Generate an image from a prompt."""
+    data = request.get_json(force=True)
+    prompt = (data.get('prompt') or '').strip()
+    if not prompt:
+        return jsonify({'error': 'Empty prompt'}), 400
+    try:
+        url = asyncio.run(agent.use_tool(ImageGeneratorTool.name, {'prompt': prompt}))
+        return jsonify({'url': url})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 
 @app.route('/api/queue', methods=['GET'])

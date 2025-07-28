@@ -44,6 +44,7 @@ function App() {
     }
   })
   const pendingIndex = useRef(null)
+  const [imagePrompt, setImagePrompt] = useState('')
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark')
@@ -134,6 +135,51 @@ function App() {
     }
   }
 
+  async function generateImage() {
+    const text = imagePrompt.trim()
+    if (!text) return
+    setImagePrompt('')
+    setMessages(m => [...m, { role: 'user', content: `Generate image: ${text}`, timestamp: new Date().toISOString() }])
+    setMessages(m => {
+      const arr = [...m, { role: 'assistant', content: 'Generating image...', pending: true }]
+      pendingIndex.current = arr.length - 1
+      return arr
+    })
+    try {
+      const headers = { 'Content-Type': 'application/json' }
+      if (authHeader.current) headers.Authorization = authHeader.current
+      const res = await fetch('/api/image', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ prompt: text })
+      })
+      const data = await res.json()
+      setMessages(m => {
+        const arr = [...m]
+        const idx = pendingIndex.current
+        if (idx !== null && arr[idx] && arr[idx].pending) {
+          arr[idx] = { role: 'assistant', content: data.url, timestamp: new Date().toISOString() }
+        } else {
+          arr.push({ role: 'assistant', content: data.url, timestamp: new Date().toISOString() })
+        }
+        pendingIndex.current = null
+        return arr
+      })
+    } catch {
+      setMessages(m => {
+        const arr = [...m]
+        const idx = pendingIndex.current
+        if (idx !== null && arr[idx] && arr[idx].pending) {
+          arr[idx] = { role: 'assistant', content: 'Error generating image.' }
+        } else {
+          arr.push({ role: 'assistant', content: 'Error generating image.' })
+        }
+        pendingIndex.current = null
+        return arr
+      })
+    }
+  }
+
   async function upload(e) {
     const files = e.target.files
     if (!files || files.length === 0) return
@@ -209,16 +255,23 @@ function App() {
                 {messages.length === 0 && (
                   <div className="text-center text-gray-500 py-10">{greetingRef.current}</div>
                 )}
-                {messages.map((m, i) => (
-                  <div key={i} className={`w-full ${m.role === 'user' ? 'bg-user' : 'bg-assistant'} py-3 px-4 text-sm`}>
-                    <div className="max-w-2xl mx-auto space-y-1 whitespace-pre-wrap">
-                      <div className="chat-message-content">
-                        {m.pending ? <span className="animate-pulse">{m.content}</span> : m.content}
+                {messages.map((m, i) => {
+                  const match =
+                    m.role === 'assistant' && typeof m.content === 'string' && m.content.match(/https?:\/\/\S+\.(?:png|jpg|jpeg)/i)
+                  return (
+                    <div key={i} className={`w-full ${m.role === 'user' ? 'bg-user' : 'bg-assistant'} py-3 px-4 text-sm`}>
+                      <div className="max-w-2xl mx-auto space-y-1 whitespace-pre-wrap">
+                        <div className="chat-message-content">
+                          {m.pending ? <span className="animate-pulse">{m.content}</span> : m.content}
+                        </div>
+                        {match && (
+                          <img src={match[0]} alt="preview" className="mt-2 max-w-full rounded-lg" />
+                        )}
+                        <div className="text-[10px] text-gray-500 text-right">{new Date(m.timestamp).toLocaleTimeString()}</div>
                       </div>
-                      <div className="text-[10px] text-gray-500 text-right">{new Date(m.timestamp).toLocaleTimeString()}</div>
                     </div>
-                  </div>
-                ))}
+                  )
+                })}
                 <div ref={messagesEndRef} />
               </div>
               <div className="p-2 bg-white dark:bg-gray-900 sticky bottom-0 flex gap-2">
@@ -253,6 +306,21 @@ function App() {
             <section className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4">
               <h2 className="font-semibold mb-1">Upload Panel</h2>
               <input type="file" multiple onChange={upload} className="text-sm" />
+            </section>
+            <section className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 space-y-2">
+              <h2 className="font-semibold mb-1">🎨 Generate Image</h2>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={imagePrompt}
+                  onChange={e => setImagePrompt(e.target.value)}
+                  placeholder="Image prompt"
+                  className="flex-1 border border-gray-300 dark:border-gray-700 rounded-lg px-2 py-1 text-sm bg-transparent"
+                />
+                <button onClick={generateImage} className="bg-blue-500 text-white px-3 py-1 rounded">
+                  Go
+                </button>
+              </div>
             </section>
           </>
         )}
