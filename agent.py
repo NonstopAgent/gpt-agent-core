@@ -24,9 +24,9 @@ from pathlib import Path
 from http import HTTPStatus
 import cgi
 from dotenv import load_dotenv
-import openai
+from openai import OpenAI
 load_dotenv()
-openai.api_key = os.environ.get("OPENAI_API_KEY", "")
+client = OpenAI()
 
 # Resolve base directory relative to this script
 BASE_DIR = Path(__file__).resolve().parent
@@ -148,8 +148,11 @@ class AgentRequestHandler(http.server.SimpleHTTPRequestHandler):
 
             reply_text = ""
             try:
-                resp = openai.ChatCompletion.create(model=os.environ.get("OPENAI_MODEL", "gpt-3.5-turbo"), messages=prompt_messages)
-                reply_text = resp["choices"][0]["message"]["content"].strip()
+                resp = client.chat.completions.create(
+                    model=os.environ.get("OPENAI_MODEL", "gpt-3.5-turbo"),
+                    messages=prompt_messages,
+                )
+                reply_text = resp.choices[0].message.content.strip()
             except Exception as api_err:
                 reply_text = f"Error: {api_err}"
 
