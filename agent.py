@@ -5,6 +5,8 @@ from datetime import datetime
 from openai import OpenAI
 from functools import wraps
 from werkzeug.utils import secure_filename
+import urllib.parse
+import urllib.request
 
 # Path to the frontend files. Originally this project expected a Vite build in
 # ``frontend/dist`` but the repository only contains plain HTML and JS directly
@@ -42,6 +44,47 @@ def _save_memory(data):
 chat_memory = _load_memory()
 
 
+def web_search(query: str) -> str:
+    """Fetch a short summary for ``query`` using DuckDuckGo."""
+    try:
+        q = urllib.parse.quote(query)
+        url = f"https://api.duckduckgo.com/?q={q}&format=json"
+        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            data = json.load(resp)
+        for key in ("AbstractText", "Answer", "Definition"):
+            if data.get(key):
+                return data[key]
+        related = data.get("RelatedTopics")
+        if isinstance(related, list) and related:
+            first = related[0]
+            if isinstance(first, dict) and first.get("Text"):
+                return first["Text"]
+    except Exception as e:
+        return f"Error during web search: {e}"
+    return "No relevant results found."
+
+
+def generate_image(prompt: str) -> str:
+    """Create an image via the OpenAI API and return its URL."""
+    client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+    try:
+        img = client.images.generate(prompt=prompt, n=1, size="512x512")
+        return img.data[0].url
+    except Exception as e:
+        return f"Error generating image: {e}"
+
+
+def tool_router(message: str) -> str:
+    """Very small router deciding which tool to use for ``message``."""
+    m = message.lower()
+    if any(k in m for k in ["image", "picture", "photo", "draw"]):
+        return "image"
+    if any(k in m for k in ["current", "news", "research", "search", "web"]):
+        return "web"
+    return "text"
+
+
 @app.route('/api/chat', methods=['POST'])
 def chat() -> 'flask.Response':
     """Chat endpoint using OpenAI with conversation memory."""
@@ -54,6 +97,15 @@ def chat() -> 'flask.Response':
     mem = chat_memory.get(project, {"messages": [], "instructions": "You are Logan's custom business assistant Agent."})
     conversation = mem.get('messages', [])
     conversation.append({'role': 'user', 'content': user_message})
+
+    tool = tool_router(user_message)
+    tool_output = None
+    if tool == 'web':
+        tool_output = web_search(user_message)
+        conversation.append({'role': 'assistant', 'content': f'[web] {tool_output}'})
+    elif tool == 'image':
+        tool_output = generate_image(user_message)
+        conversation.append({'role': 'assistant', 'content': f'[image] {tool_output}'})
 
     client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
     model = os.getenv('OPENAI_MODEL', 'gpt-3.5-turbo')
@@ -100,7 +152,8 @@ def chat() -> 'flask.Response':
     except Exception:
         pass
 
-    return jsonify({'response': reply, 'timestamp': record['timestamp']})
+    final_reply = reply if not tool_output else f"{tool_output}\n\n{reply}"
+    return jsonify({'response': final_reply, 'timestamp': record['timestamp']})
 
 
 @app.route('/api/queue', methods=['GET'])
