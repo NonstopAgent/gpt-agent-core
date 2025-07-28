@@ -49,7 +49,7 @@ Feel free to extend or replace the frontend with a React or Vite implementation.
 
 ## Backend
 
-The backend is implemented in `agent.py` using only the Python standard library.  It exposes a simple HTTP API for reading and writing task queues and logs, and it serves the files in the `frontend/` directory.  Because no third‑party dependencies are used, it can run in environments without network access to external package registries.
+The backend is implemented in `agent.py` and exposes a simple HTTP API for reading and writing task queues and logs.  It now relies on a few Python packages, including [Playwright](https://playwright.dev/python/) for the built‑in `WebBrowserTool` that lets the agent fetch live web pages.
 
 ### Running the server
 

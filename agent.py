@@ -1,10 +1,12 @@
 from flask import Flask, send_from_directory, request, jsonify, Response
 import os
 import json
+import asyncio
 from datetime import datetime
 from openai import OpenAI
 from functools import wraps
 from werkzeug.utils import secure_filename
+from tools.web_browser import WebBrowserTool
 
 # Path to the frontend files. Originally this project expected a Vite build in
 # ``frontend/dist`` but the repository only contains plain HTML and JS directly
@@ -39,7 +41,20 @@ def _save_memory(data):
     with open(CHAT_MEMORY_FILE, 'w', encoding='utf-8') as f:
         json.dump(data, f, indent=2)
 
+class Agent:
+    """Simple container for registered tools."""
+
+    def __init__(self) -> None:
+        self.tools = {'web': WebBrowserTool()}
+
+    async def use_tool(self, name: str, params: dict) -> dict:
+        tool = self.tools.get(name)
+        if not tool:
+            raise ValueError(f'Unknown tool: {name}')
+        return await asyncio.to_thread(tool.run, params)
+
 chat_memory = _load_memory()
+agent = Agent()
 
 
 @app.route('/api/chat', methods=['POST'])
@@ -54,6 +69,15 @@ def chat() -> 'flask.Response':
     mem = chat_memory.get(project, {"messages": [], "instructions": "You are Logan's custom business assistant Agent."})
     conversation = mem.get('messages', [])
     conversation.append({'role': 'user', 'content': user_message})
+
+    if any(k in user_message.lower() for k in ['search', 'look up', 'get latest info']):
+        try:
+            result = asyncio.run(agent.use_tool('web', {'query': user_message}))
+            snippet = result.get('body', '')[:1000]
+            tool_msg = f"Web result for {result['url']}\nTitle: {result['title']}\n{snippet}"
+            conversation.append({'role': 'system', 'content': tool_msg})
+        except Exception as e:
+            conversation.append({'role': 'system', 'content': f'Web tool error: {e}'})
 
     client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
     model = os.getenv('OPENAI_MODEL', 'gpt-3.5-turbo')
