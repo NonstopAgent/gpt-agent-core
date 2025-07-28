@@ -49,7 +49,9 @@ The backend is implemented in `agent.py` using only the Python standard library.
 python3 agent.py
 ```
 
-The server will start on port 8000 by default.  Visit `http://localhost:8000` in your browser to load the dashboard.
+The server will start on port 8000 by default (or whatever value you set in the
+`PORT` environment variable).  Visit `http://localhost:8000` in your browser to
+load the dashboard.
 
 ### API Endpoints
 
