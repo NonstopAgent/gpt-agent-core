@@ -62,14 +62,12 @@ class ToolAgent:
 agent = ToolAgent()
 
 
-@app.route('/api/chat', methods=['POST'])
-def chat() -> 'flask.Response':
-    """Chat endpoint using OpenAI with conversation memory."""
-    data = request.get_json(force=True)
+def handle_post_chat(data: dict) -> dict:
+    """Process a chat request and return a response payload."""
     user_message = (data.get('message') or '').strip()
     project = data.get('project', 'general')
     if not user_message:
-        return jsonify({'error': 'Empty message'}), 400
+        return {'error': 'Empty message'}
 
     mem = chat_memory.get(project, {"messages": [], "instructions": "You are Logan's custom business assistant Agent."})
     conversation = mem.get('messages', [])
@@ -84,7 +82,23 @@ def chat() -> 'flask.Response':
         )
         reply = completion.choices[0].message.content
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return {'error': str(e)}
+
+    keywords = ['generate image', 'draw']
+    lowered = user_message.lower()
+    if any(k in lowered for k in keywords):
+        prompt = user_message
+        for k in keywords:
+            if k in lowered:
+                after = user_message.lower().split(k, 1)[1].strip()
+                if after:
+                    prompt = after
+                break
+        try:
+            image_url = asyncio.run(agent.use_tool(ImageGeneratorTool.name, {'prompt': prompt}))
+            reply = f"{reply}\n\nImage URL: {image_url}"
+        except Exception as e:
+            reply = f"{reply}\n\nFailed to generate image: {e}"
 
     conversation.append({'role': 'assistant', 'content': reply})
     mem['messages'] = conversation[-20:]
@@ -120,7 +134,17 @@ def chat() -> 'flask.Response':
     except Exception:
         pass
 
-    return jsonify({'response': reply, 'timestamp': record['timestamp']})
+    return {'response': reply, 'timestamp': record['timestamp']}
+
+
+@app.route('/api/chat', methods=['POST'])
+def chat() -> 'flask.Response':
+    """Chat endpoint using OpenAI with conversation memory."""
+    data = request.get_json(force=True)
+    result = handle_post_chat(data)
+    if 'error' in result:
+        return jsonify({'error': result['error']}), 400
+    return jsonify(result)
 
 
 @app.route('/api/queue', methods=['GET'])
