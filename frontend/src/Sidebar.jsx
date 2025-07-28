@@ -18,7 +18,7 @@ export default function Sidebar({
 }) {
   const [showLinks, setShowLinks] = useState(false)
   return (
-    <aside className={`fixed sm:relative z-20 inset-y-0 left-0 w-64 bg-gray-800 text-white flex flex-col p-4 space-y-4 transition-all duration-300 ease-in-out ${sidebarOpen ? 'translate-x-0' : '-translate-x-full sm:translate-x-0'}`}>\
+    <aside className={`fixed sm:relative z-20 inset-y-0 left-0 w-64 bg-gray-800 text-white flex flex-col p-4 space-y-4 transition-all duration-300 ease-in-out overflow-y-auto ${sidebarOpen ? 'translate-x-0' : '-translate-x-full sm:translate-x-0'}`}>\
       <div>
         <h1 className="text-xl font-bold">Welcome Logan \uD83D\uDC4B</h1>
       </div>
