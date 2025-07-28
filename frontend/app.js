@@ -136,7 +136,7 @@ document.addEventListener('DOMContentLoaded', () => {
     renderChat();
     chatInput.value = '';
     try {
-      const res = await fetch('/api/chat', {
+      const res = await fetch('https://gpt-agent-core-production.up.railway.app/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ project: activeProject, message: content })
