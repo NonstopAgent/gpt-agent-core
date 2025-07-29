@@ -1,96 +1,112 @@
 import { useEffect, useRef, useState } from 'react'
-import { PaperAirplaneIcon } from '@heroicons/react/24/solid'
 
-export default function ChatBox() {
-  const [messages, setMessages] = useState([
-    { from: 'agent', text: 'How can I help?' },
-  ])
+/**
+ * ChatBox renders conversation bubbles and a sticky input field.
+ * It accepts a function to send messages to the server.  Messages
+ * alternate alignment based on sender and display a simple typing
+ * animation while awaiting a response.
+ */
+export default function ChatBox({ sendMessage }) {
+  const [messages, setMessages] = useState([])
   const [input, setInput] = useState('')
-  const [typing, setTyping] = useState(false)
+  const pendingRef = useRef(null)
   const endRef = useRef(null)
 
+  // Scroll to bottom on new message
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
-  function send() {
+  async function handleSend() {
     const text = input.trim()
     if (!text) return
-    setMessages(m => [...m, { from: 'user', text }])
     setInput('')
-    // simulate loading indicator
-    setTyping(true)
-    setTimeout(() => {
-      setMessages(m => [...m, { from: 'agent', text: 'Received: ' + text }])
-      setTyping(false)
-    }, 800)
+    setMessages(m => [...m, { role: 'user', content: text }])
+    // Add placeholder
+    const placeholder = { role: 'assistant', content: '...', pending: true }
+    setMessages(m => {
+      const arr = [...m, placeholder]
+      pendingRef.current = arr.length - 1
+      return arr
+    })
+    try {
+      const res = await sendMessage(text)
+      setMessages(m => {
+        const arr = [...m]
+        const idx = pendingRef.current
+        if (idx != null && arr[idx] && arr[idx].pending) {
+          arr[idx] = { role: 'assistant', content: res.response, timestamp: res.timestamp }
+        }
+        pendingRef.current = null
+        return arr
+      })
+    } catch (e) {
+      setMessages(m => {
+        const arr = [...m]
+        const idx = pendingRef.current
+        if (idx != null && arr[idx] && arr[idx].pending) {
+          arr[idx] = { role: 'assistant', content: 'Error: ' + e.message }
+        }
+        pendingRef.current = null
+        return arr
+      })
+    }
+  }
+
+  function handleKey(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      handleSend()
+    }
   }
 
   return (
-    <div className="h-full flex flex-col border rounded-lg">
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50 dark:bg-gray-800">
-        {messages.map((m, i) => {
-          const match =
-            m.from === 'agent' && m.text.match(/https?:\/\/\S+\.(?:png|jpg)/i)
-          return (
+    <div className="flex flex-col h-full">
+      {/* Conversation area */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        {messages.length === 0 && (
+          <div className="text-center text-gray-500 dark:text-gray-400">What’s up, Logan?</div>
+        )}
+        {messages.map((m, i) => (
+          <div
+            key={i}
+            className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}
+          >
             <div
-              key={i}
-              className={`flex ${m.from === 'user' ? 'justify-end' : 'justify-start'}`}
+              className={
+                (m.role === 'user'
+                  ? 'bg-blue-500 text-white'
+                  : 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100') +
+                ' px-4 py-2 rounded-lg max-w-[75%] whitespace-pre-wrap'
+              }
             >
-              <div
-                className={`flex flex-col ${
-                  m.from === 'user' ? 'items-end' : 'items-start'
-                }`}
-              >
-                <div
-                  className={`${
-                    m.from === 'user'
-                      ? 'bg-blue-500 text-white'
-                      : 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100'
-                  } px-4 py-2 rounded-lg max-w-[75%] whitespace-pre-wrap`}
-                >
-                  {m.text}
+              {m.pending ? <span className="animate-pulse">{m.content}</span> : m.content}
+              {m.timestamp && (
+                <div className="text-xs text-right opacity-50 mt-1">
+                  {new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </div>
-                {match && (
-                  <img
-                    src={match[0]}
-                    alt="image preview"
-                    className="mt-2 max-w-[75%] rounded-lg"
-                  />
-                )}
-              </div>
-            </div>
-          )
-        })}
-        {typing && (
-          <div className="flex justify-start">
-            <div className="bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-4 py-2 rounded-lg max-w-[75%]">
-              <span className="animate-pulse">...</span>
+              )}
             </div>
           </div>
-        )}
+        ))}
         <div ref={endRef} />
       </div>
-      <div className="border-t border-gray-200 dark:border-gray-700 p-2 flex gap-2 bg-white dark:bg-gray-900">
+      {/* Input area */}
+      <div className="p-3 border-t border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 flex items-center gap-2">
         <textarea
-          className="flex-1 border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-2 text-sm bg-transparent focus:outline-none resize-none overflow-hidden"
-          rows={1}
           value={input}
           onChange={e => setInput(e.target.value)}
-          onInput={e => {
-            e.target.style.height = 'auto'
-            e.target.style.height = e.target.scrollHeight + 'px'
-          }}
-          onKeyDown={e => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-              e.preventDefault()
-              send()
-            }
-          }}
+          onKeyDown={handleKey}
+          rows={1}
           placeholder="Send a message"
+          className="flex-1 resize-none bg-transparent focus:outline-none"
         />
-        <button onClick={send} className="bg-blue-500 text-white p-2 rounded-lg shadow-sm self-end">
-          <PaperAirplaneIcon className="w-5 h-5" />
+        <button
+          onClick={handleSend}
+          className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded disabled:opacity-50"
+          disabled={!input.trim()}
+        >
+          Send
         </button>
       </div>
     </div>

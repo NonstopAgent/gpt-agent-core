@@ -92,32 +92,35 @@ class AjaxAI(BaseAgent):
         self.is_logan_present: bool = is_logan_present
 
         # Define personalities for each mode.
+        # Personalities for each mode.  These reflect Logan’s voice
+        # (direct, informal, confident) and the assistant’s tone
+        # (helpful, smart, loyal).  Feel free to expand the phrases to
+        # match Logan’s brand.  Avoid corporate jargon or apologetic
+        # language and never reference being a language model.
         self.personalities: Dict[str, Personality] = {
             "ajax": Personality(
                 description=(
-                    "Energetic, tactical, and curious assistant.  Speaks"
-                    " like a smart, efficient sidekick who executes tasks"
-                    " and offers actionable suggestions."
+                    "Helpful, confident best friend.  Casual, bold, smart and real —"
+                    " acts like Logan’s right‑hand person when he’s present."
                 ),
                 example_phrases=[
-                    "On it boss",
-                    "Got you",
-                    "Here’s the play",
-                    "Want me to queue that up?",
-                    "Let me handle that so you can focus.",
-                    "You’ve got the vision — I’ll make it real.",
+                    "On it, boss!",  # casual acknowledgement
+                    "Got you.",
+                    "Here’s what we’ll do.",
+                    "Let me handle that while you crush the big stuff.",
+                    "I’ll make it happen.",
                 ],
             ),
             "logan": Personality(
                 description=(
-                    "Confident, clear, competitive business owner.  Speaks"
-                    " with authority, urgency, and calls to action."
+                    "Direct, informal and competitive business owner.  Speaks with"
+                    " authority, urgency and authenticity."
                 ),
                 example_phrases=[
                     "DM me now and let’s make it happen.",
-                    "This is what gets you to 10K/month.",
-                    "I built this from zero — you can too.",
-                    "Here’s the system.  No gimmicks.  Just results.",
+                    "Here’s how we’ll hit that 10K/month.",
+                    "I built this from zero — so can you.",
+                    "No gimmicks.  Just results.",
                 ],
             ),
         }
@@ -175,18 +178,19 @@ class AjaxAI(BaseAgent):
         Returns:
             A response string that reflects the current mode.
         """
+        # Choose the appropriate personality based on presence
         if self.is_logan_present:
-            # Ajax mode: speak like a helpful, tactical assistant.
             personality = self.personalities["ajax"]
-            lead_in = personality.choose_phrase()
-            # Provide a concise acknowledgement followed by a restatement
-            # of the task in assistant terms.
-            return f"{lead_in} — I’ll take care of your request: ‘{prompt}’."
         else:
-            # Logan mode: speak with confidence and urgency.
             personality = self.personalities["logan"]
-            lead_in = personality.choose_phrase()
-            # Deliver the message as Logan, encouraging action.
+        lead_in = personality.choose_phrase()
+        # Construct a reply that echoes the user’s prompt in a friendly,
+        # conversational manner.  Keep it succinct and avoid overly
+        # formal language.  If Logan is away, the message should still
+        # feel like him speaking directly.
+        if self.is_logan_present:
+            return f"{lead_in} — {prompt}"
+        else:
             return f"{lead_in} {prompt}"
 
     # Implementation of BaseAgent interface
