@@ -15,6 +15,8 @@ import os
 
 from backend.agent import create_app
 
+import openai 
+openai.api_key = os.getenv("OPENAI_API_KEY")
 
 # Create the Flask application using the factory.  The ``create_app``
 # function sets up basic authentication, registers API endpoints and
