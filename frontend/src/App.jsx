@@ -438,6 +438,14 @@ function App() {
       >
         <PlusIcon className="w-6 h-6" />
       </button>
+      {/* Sticky sidebar toggle for mobile: remain accessible regardless of scroll position. */}
+      <button
+        onClick={() => setSidebarOpen(s => !s)}
+        className="fixed bottom-4 left-4 bg-gray-800 text-white p-3 rounded-full shadow-lg sm:hidden"
+        aria-label="Toggle sidebar"
+      >
+        <Bars3Icon className="w-5 h-5" />
+      </button>
     </div>
   )
 }
