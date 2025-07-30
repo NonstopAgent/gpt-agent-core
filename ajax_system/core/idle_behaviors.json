@@ -1,0 +1,6 @@
+{
+  "scan_social_comments": true,
+  "review_spreadsheets": true,
+  "read_financial_sites": true,
+  "frequency_minutes": 30
+}

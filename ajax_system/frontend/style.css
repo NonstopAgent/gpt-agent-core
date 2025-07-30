@@ -1,0 +1,54 @@
+/* Base styles for the AJAX frontend.
+ * TailwindCSS classes are available globally thanks to the build pipeline.
+ */
+
+body {
+  margin: 0;
+  font-family: sans-serif;
+}
+
+/* Chat bubble styles */
+.chat-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.message {
+  max-width: 75%;
+  padding: 0.5rem 0.75rem;
+  margin: 0.25rem;
+  border-radius: 0.5rem;
+  line-height: 1.25rem;
+}
+
+.message.user {
+  align-self: flex-end;
+  background-color: #d1fae5; /* green-100 */
+}
+
+.message.ai-logan {
+  align-self: flex-start;
+  background-color: #fee2e2; /* red-100 */
+}
+
+.message.ai-ajax {
+  align-self: flex-start;
+  background-color: #dbeafe; /* blue-100 */
+}
+
+.task-timeline {
+  padding: 1rem;
+  overflow-y: auto;
+  max-height: 300px;
+}
+
+.task-item {
+  display: flex;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.task-icon {
+  margin-right: 0.5rem;
+}

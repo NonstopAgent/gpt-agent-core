@@ -1,0 +1,14 @@
+{
+  "name": "investor",
+  "role": "Investor",
+  "skills": [
+    "market analysis",
+    "portfolio management",
+    "risk assessment"
+  ],
+  "permissions": [
+    "read_financial_data",
+    "execute_trades"
+  ],
+  "created_at": "2025-07-30T00:00:00"
+}
