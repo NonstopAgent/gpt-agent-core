@@ -7,11 +7,11 @@ import PersonalAssistant from './PersonalAssistant.jsx'
 import './App.css'
 import './index.css'
 
-const DEFAULT_BRANDS = [
-  { key: 'remote100k', name: 'Remote100K' },
-  { key: 'tradeview_ai', name: 'Tradeview AI' },
-  { key: 'app_304', name: '304 App' },
-]
+// Brand list is now loaded dynamically from the backend.  Projects
+// correspond to subdirectories in the server’s memory folder.  The
+// array holds objects with `key` and `name` properties.  It starts
+// empty and is populated on mount via /api/projects.
+const DEFAULT_BRANDS = []
 
 const GREETINGS = [
   "What's up, Logan?",
@@ -20,6 +20,10 @@ const GREETINGS = [
 ]
 
 function App() {
+  // Projects (brands) loaded from the backend.  Each entry has
+  // structure { key: string, name: string }.  Initially empty until
+  // fetched on mount.  The list is kept in sync when new projects are
+  // created via the addProject function.
   const [brands, setBrands] = useState(DEFAULT_BRANDS)
   const [brand, setBrand] = useState('remote100k')
   const [messages, setMessages] = useState([])
@@ -77,14 +81,60 @@ function App() {
     }
   }
 
-  function addProject() {
+  // Create a new project.  Prompt the user for a friendly name,
+  // derive a key by lowercasing and replacing whitespace, then POST
+  // to /api/projects.  On success, append the returned metadata to
+  // the local brands list.  If the backend rejects the request, an
+  // alert is displayed.
+  async function addProject() {
     const name = prompt('Project name?')
     if (!name) return
     const key = name.toLowerCase().replace(/\s+/g, '_')
-    setBrands(b => [...b, { key, name }])
+    try {
+      const headers = { 'Content-Type': 'application/json' }
+      if (authHeader.current) headers.Authorization = authHeader.current
+      const res = await fetch('/api/projects', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ name: name.trim(), key }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        alert(data.error || 'Failed to create project')
+        return
+      }
+      setBrands(b => [...b, { key: data.key, name: data.name }])
+    } catch (e) {
+      alert('Failed to create project')
+    }
   }
 
   useEffect(() => { loadData() }, [])
+
+  // Fetch the list of existing projects on first render.  The
+  // response from /api/projects is an array of keys.  Convert each
+  // key into a display name by replacing underscores with spaces and
+  // capitalising each word.
+  useEffect(() => {
+    async function fetchProjects() {
+      try {
+        const headers = authHeader.current ? { Authorization: authHeader.current } : {}
+        const res = await fetch('/api/projects', { headers })
+        if (!res.ok) return
+        const keys = await res.json()
+        const list = keys.map(k => {
+          const words = k.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1))
+          return { key: k, name: words.join(' ') }
+        })
+        setBrands(list)
+        // default selected brand: first project if available
+        if (list.length > 0) setBrand(list[0].key)
+      } catch {
+        // ignore errors
+      }
+    }
+    fetchProjects()
+  }, [])
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -218,15 +268,11 @@ function App() {
   async function togglePresence() {
     const newState = !isPresent
     setIsPresent(newState)
-    const command = newState ? '/loganin' : '/loganout'
     try {
       const headers = { 'Content-Type': 'application/json' }
       if (authHeader.current) headers.Authorization = authHeader.current
-      await fetch('/api/chat', {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({ message: command }),
-      })
+      const endpoint = newState ? '/api/loganin' : '/api/loganout'
+      await fetch(endpoint, { method: 'POST', headers })
     } catch (e) {
       console.error('Failed to toggle presence', e)
     }

@@ -74,6 +74,13 @@ def register_api_endpoints(app: Flask, require_auth: Callable) -> None:
         'live_status': 'idle',
     }
 
+    # Directory for storing project metadata and files.  Projects live
+    # under the memory folder to group related uploads, chat history
+    # and configuration.  Each subdirectory represents a single
+    # project.  A project.json file is created when a new project is
+    # registered via the /api/projects POST endpoint.
+    projects_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'memory')
+
     # Handle chat messages with presence, slash commands and memory
     def process_chat_message(message: str, ajax_agent) -> str:
         lowered = message.strip().lower()
@@ -113,6 +120,159 @@ def register_api_endpoints(app: Flask, require_auth: Callable) -> None:
         # Normal conversation: generate response and remember last 10 messages
         ajax_agent_response = ajax_agent.generate_response(message)
         return ajax_agent_response
+
+    @app.route('/api/loganin', methods=['POST'])
+    @require_auth
+    def api_loganin() -> Any:
+        """Explicitly set the agent to assistant (Ajax) mode.
+
+        This endpoint mirrors the `/loganin` slash command but
+        provides a more RESTful interface for the UI.  When
+        invoked, Logan is marked as present and the agent adopts
+        the assistant persona.
+        """
+        ajax_agent = app.config['ajax_agent']
+        ajax_agent.is_logan_present = True
+        status_info['mode'] = 'ajax'
+        return jsonify({'message': 'Logan is present. Switching to assistant mode.'})
+
+    @app.route('/api/loganout', methods=['POST'])
+    @require_auth
+    def api_loganout() -> Any:
+        """Explicitly set the agent to Logan mode.
+
+        This endpoint mirrors the `/loganout` slash command but
+        provides a more RESTful interface for the UI.  When invoked,
+        Logan is marked as absent and the agent speaks on his behalf.
+        """
+        ajax_agent = app.config['ajax_agent']
+        ajax_agent.is_logan_present = False
+        status_info['mode'] = 'logan'
+        return jsonify({'message': 'Logan is away. Speaking on his behalf.'})
+
+    @app.route('/api/projects', methods=['GET', 'POST'])
+    @require_auth
+    def api_projects() -> Any:
+        """List existing projects or create a new project.
+
+        * GET: returns an array of project keys.  A project is
+          represented by a subdirectory within the memory folder.
+        * POST: accepts a JSON payload with `name` and `key`.
+          Creates a corresponding subdirectory and writes a
+          project.json metadata file.  If the project already exists
+          the metadata file is updated but no error is thrown.
+        """
+        if request.method == 'GET':
+            try:
+                dirs = []
+                for entry in os.listdir(projects_dir):
+                    path = os.path.join(projects_dir, entry)
+                    if os.path.isdir(path):
+                        dirs.append(entry)
+                return jsonify(dirs)
+            except Exception as e:
+                return jsonify({'error': str(e)}), 500
+        # POST request: create a project
+        try:
+            data = request.get_json(force=True)
+        except Exception:
+            data = {}
+        name = (data.get('name') or '').strip()
+        key = (data.get('key') or '').strip()
+        if not name or not key:
+            return jsonify({'error': 'name and key fields required'}), 400
+        proj_path = os.path.join(projects_dir, key)
+        try:
+            os.makedirs(proj_path, exist_ok=True)
+            # write metadata
+            meta = {
+                'name': name,
+                'key': key,
+                'created': datetime.now().isoformat(),
+            }
+            with open(os.path.join(proj_path, 'project.json'), 'w', encoding='utf-8') as f:
+                json.dump(meta, f, indent=2)
+            return jsonify(meta)
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+
+    @app.route('/api/agents', methods=['GET', 'POST'])
+    @require_auth
+    def api_agents() -> Any:
+        """List or create AI sub‑agents.
+
+        * GET: returns a list of agent names currently registered
+          with the Ajax agent.  These are keys from the agent
+          registry.
+        * POST: accepts JSON payload with `name`, `role` and
+          `base_behavior`.  Creates a folder under core/agents with
+          a config.json and an empty training.md.  The agent is not
+          auto‑registered; this endpoint simply scaffolds the
+          directories so that administrators can later supply
+          training materials.
+        """
+        ajax_agent = app.config['ajax_agent']
+        if request.method == 'GET':
+            return jsonify(list(ajax_agent.agent_registry.keys()))
+        try:
+            data = request.get_json(force=True)
+        except Exception:
+            data = {}
+        name = (data.get('name') or '').strip()
+        role = (data.get('role') or '').strip()
+        base_behavior = (data.get('base_behavior') or '').strip()
+        if not name:
+            return jsonify({'error': 'name field required'}), 400
+        # Normalise agent name to lower‑case directory name
+        agent_key = name.lower().replace(' ', '_')
+        agents_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'core', 'agents')
+        path = os.path.join(agents_dir, agent_key)
+        try:
+            os.makedirs(path, exist_ok=True)
+            # Write config.json
+            cfg = {
+                'name': name,
+                'role': role,
+                'base_behavior': base_behavior,
+            }
+            with open(os.path.join(path, 'config.json'), 'w', encoding='utf-8') as f:
+                json.dump(cfg, f, indent=2)
+            # Create empty training file if missing
+            training_path = os.path.join(path, 'training.md')
+            if not os.path.exists(training_path):
+                with open(training_path, 'w', encoding='utf-8') as f:
+                    f.write('')
+            return jsonify({'name': name, 'role': role, 'base_behavior': base_behavior})
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+
+    @app.route('/api/agents/<string:name>/train', methods=['POST'])
+    @require_auth
+    def api_agent_train(name: str) -> Any:
+        """Upload training files for a given sub‑agent.
+
+        Files submitted here are stored under core/knowledge/{name}/.
+        The endpoint responds with the list of saved filenames and
+        logs a message indicating that the training file was
+        received.  No parsing or embedding is performed server‑side.
+        """
+        files = request.files.getlist('file')
+        if not files:
+            return jsonify({'error': 'no file provided'}), 400
+        # Normalise agent name to match directory name
+        agent_key = name.lower().replace(' ', '_')
+        knowledge_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'core', 'knowledge', agent_key)
+        os.makedirs(knowledge_dir, exist_ok=True)
+        saved = []
+        for f in files:
+            filename = f.filename
+            f.save(os.path.join(knowledge_dir, filename))
+            saved.append(filename)
+        # Log the upload in status history
+        msg = f"Training file received: {', '.join(saved)}"
+        status_info['history'].append(msg)
+        status_info['history'] = status_info['history'][-5:]
+        return jsonify({'files': saved, 'message': msg})
 
     @app.route('/api/chat', methods=['POST'])
     @require_auth
