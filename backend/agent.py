@@ -30,7 +30,13 @@ FRONTEND_DIST = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '
 
 
 def create_app() -> Flask:
-    """Factory to create and configure the Flask app."""
+    """Factory to create and configure the Flask app.
+
+    The backend uses basic authentication for API endpoints but
+    deliberately leaves the static frontend unprotected to avoid
+    loading issues with compiled assets (JS/CSS).  Static files are
+    served from the `dist` directory without requiring credentials.
+    """
     app = Flask(__name__, static_folder=FRONTEND_DIST, static_url_path='')
 
     # Basic auth credentials from env or defaults
@@ -38,6 +44,7 @@ def create_app() -> Flask:
     BASIC_PASS = os.getenv('BASIC_PASS', 'AllDay21!!!')
 
     def require_auth(fn):
+        """Decorator to enforce basic authentication on API routes."""
         @wraps(fn)
         def wrapper(*args, **kwargs):
             auth = request.authorization
@@ -54,14 +61,19 @@ def create_app() -> Flask:
     ajax_agent = build_default_ajax()
     app.config['ajax_agent'] = ajax_agent
 
-    # Register API endpoints
+    # Register API endpoints with auth protection
     register_api_endpoints(app, require_auth)
 
     @app.route('/', defaults={'path': ''})
     @app.route('/<path:path>')
-    @require_auth
     def serve_frontend(path: str):
-        """Serve the compiled React app from the dist directory."""
+        """Serve the compiled React app from the dist directory.
+
+        This route does not require authentication so that the
+        frontend can load JS and CSS assets without prompting the
+        user multiple times.  Sensitive API calls remain protected
+        via the `require_auth` decorator.
+        """
         target = os.path.join(app.static_folder, path)
         if path and os.path.exists(target):
             return send_from_directory(app.static_folder, path)
