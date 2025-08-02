@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import TypingDots from './TypingDots.jsx'
 
 /**
  * ChatBox renders conversation bubbles and a sticky input field.
@@ -6,8 +7,7 @@ import { useEffect, useRef, useState } from 'react'
  * alternate alignment based on sender and display a simple typing
  * animation while awaiting a response.
  */
-export default function ChatBox({ sendMessage }) {
-  const [messages, setMessages] = useState([])
+export default function ChatBox({ messages, setMessages, sendMessage }) {
   const [input, setInput] = useState('')
   const pendingRef = useRef(null)
   const endRef = useRef(null)
@@ -22,8 +22,8 @@ export default function ChatBox({ sendMessage }) {
     if (!text) return
     setInput('')
     setMessages(m => [...m, { role: 'user', content: text }])
-    // Add placeholder
-    const placeholder = { role: 'assistant', content: '...', pending: true }
+    // Add placeholder for typing indicator
+    const placeholder = { role: 'assistant', content: '', pending: true }
     setMessages(m => {
       const arr = [...m, placeholder]
       pendingRef.current = arr.length - 1
@@ -80,7 +80,7 @@ export default function ChatBox({ sendMessage }) {
                 ' px-4 py-2 rounded-lg max-w-[75%] whitespace-pre-wrap'
               }
             >
-              {m.pending ? <span className="animate-pulse">{m.content}</span> : m.content}
+              {m.pending ? <TypingDots /> : m.content}
               {m.timestamp && (
                 <div className="text-xs text-right opacity-50 mt-1">
                   {new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
