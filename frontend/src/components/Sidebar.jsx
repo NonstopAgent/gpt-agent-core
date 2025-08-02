@@ -44,10 +44,10 @@ export default function Sidebar({
   return (
     <aside
       className={
-        `fixed inset-y-0 left-0 z-20 w-60 bg-gray-900 text-gray-100 p-3 ` +
-        `border-r border-gray-800 overflow-y-auto transform ` +
-        `${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} ` +
-        `sm:translate-x-0 transition-transform duration-200 ease-in-out`
+        `fixed top-0 left-0 z-20 w-60 h-screen bg-gray-100 text-gray-900 dark:bg-gray-900 dark:text-gray-100 p-3 ` +
+        `border-r border-gray-200 dark:border-gray-800 overflow-y-scroll transform ` +
+        `${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 ` +
+        `transition-transform duration-200 ease-in-out`
       }
     >
       <div className="mb-4 text-lg font-semibold">Projects</div>
@@ -55,7 +55,7 @@ export default function Sidebar({
         <div key={b.key} className="mb-1">
           <button
             onClick={() => toggleBrand(b.key)}
-            className="flex items-center justify-between w-full px-2 py-1 rounded hover:bg-gray-800"
+            className="flex items-center justify-between w-full px-2 py-1 rounded hover:bg-gray-200 dark:hover:bg-gray-800"
           >
             <span className="flex items-center gap-2">
               <FolderIcon className="w-5 h-5" />
@@ -81,7 +81,7 @@ export default function Sidebar({
                     onSelect(b.key, item)
                     setSidebarOpen(false)
                   }}
-                  className="flex items-center gap-2 w-full px-2 py-1 text-sm rounded hover:bg-gray-800"
+                  className="flex items-center gap-2 w-full px-2 py-1 text-sm rounded hover:bg-gray-200 dark:hover:bg-gray-800"
                 >
                   <DocumentTextIcon className="w-4 h-4" /> {item}
                 </button>
@@ -97,11 +97,11 @@ export default function Sidebar({
             value={newProjectName}
             onChange={e => setNewProjectName(e.target.value)}
             placeholder="New project"
-            className="flex-1 px-2 py-1 rounded bg-gray-800 text-sm focus:outline-none"
+            className="flex-1 px-2 py-1 rounded bg-gray-200 dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 focus:outline-none"
           />
           <button
             onClick={handleAdd}
-            className="p-2 rounded bg-gray-800 hover:bg-gray-700"
+            className="p-2 rounded bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700"
           >
             <PlusIcon className="w-4 h-4" />
           </button>
