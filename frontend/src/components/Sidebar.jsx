@@ -44,8 +44,8 @@ export default function Sidebar({
   return (
     <aside
       className={
-        `fixed top-0 left-0 z-20 w-60 h-screen bg-gray-100 text-gray-900 dark:bg-gray-900 dark:text-gray-100 p-3 ` +
-        `border-r border-gray-200 dark:border-gray-800 overflow-y-scroll transform ` +
+        `fixed top-0 left-0 z-20 w-64 h-screen bg-gray-100 text-gray-900 dark:bg-gray-900 dark:text-gray-100 p-4 ` +
+        `border-r border-gray-200 dark:border-gray-800 overflow-y-auto transform ` +
         `${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 ` +
         `transition-transform duration-200 ease-in-out`
       }
