@@ -56,7 +56,9 @@ function App() {
   const [isPresent, setIsPresent] = useState(() => true)
 
   useEffect(() => {
-    document.documentElement.classList.toggle('dark', theme === 'dark')
+    const dark = theme === 'dark'
+    document.documentElement.classList.toggle('dark', dark)
+    document.body.classList.toggle('dark', dark)
     localStorage.setItem('theme', theme)
   }, [theme])
 
