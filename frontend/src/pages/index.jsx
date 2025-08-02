@@ -57,15 +57,22 @@ export default function IndexPage() {
         sidebarOpen={sidebarOpen}
         setSidebarOpen={setSidebarOpen}
       />
+      {!sidebarOpen && (
+        <button
+          onClick={() => setSidebarOpen(true)}
+          className="fixed top-3 left-3 z-30 md:hidden"
+        >
+          ☰
+        </button>
+      )}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 bg-black/50 sm:hidden"
+          className="fixed inset-0 bg-black/50 md:hidden z-10"
           onClick={() => setSidebarOpen(false)}
         />
       )}
       <div className="flex flex-col md:ml-60 h-screen">
-        <header className="flex items-center justify-between p-3 border-b border-gray-200 dark:border-gray-800 md:border-b-0">
-          <button onClick={() => setSidebarOpen(true)} className="md:hidden">☰</button>
+        <header className="flex items-center justify-between py-3 pr-3 pl-12 md:pl-3 border-b border-gray-200 dark:border-gray-800 md:border-b-0">
           <div className="font-semibold truncate">
             {current.project && current.item
               ? `${brands.find(b => b.key === current.project)?.name || ''} / ${current.item}`
