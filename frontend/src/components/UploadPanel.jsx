@@ -20,7 +20,7 @@ export default function UploadPanel({ onUpload }) {
     e.preventDefault()
     setDragging(true)
   }
-  function handleDragLeave(e) {
+  function handleDragLeave() {
     setDragging(false)
   }
   function handleChange(e) {

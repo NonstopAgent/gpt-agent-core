@@ -104,7 +104,7 @@ function App() {
         return
       }
       setBrands(b => [...b, { key: data.key, name: data.name }])
-    } catch (e) {
+    } catch {
       alert('Failed to create project')
     }
   }

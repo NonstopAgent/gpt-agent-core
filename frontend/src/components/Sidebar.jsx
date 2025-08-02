@@ -12,7 +12,8 @@ const DEFAULT_BRANDS = [
   { key: 'tradeview_ai', name: 'Tradeview AI' },
   { key: 'app_304', name: '304 App' },
 ]
-const PROJECT_ITEMS = ['Slides', 'Captions', 'Media Uploads', 'Chat Logs']
+// Items shown under each project folder
+const PROJECT_ITEMS = ['Slides', 'Captions', 'Files', 'Tasks', 'Comments']
 
 /**
  * Sidebar component containing project folders.  Supports
@@ -43,14 +44,14 @@ export default function Sidebar({
   return (
     <aside
       className={
-        `flex-shrink-0 w-60 h-full bg-gray-900 text-gray-100 p-3 ` +
+        `fixed inset-y-0 left-0 z-20 w-60 bg-gray-900 text-gray-100 p-3 ` +
         `border-r border-gray-800 overflow-y-auto transform ` +
         `${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} ` +
         `sm:translate-x-0 transition-transform duration-200 ease-in-out`
       }
     >
       <div className="mb-4 text-lg font-semibold">Projects</div>
-      {brands.map((b, idx) => (
+      {brands.map(b => (
         <div key={b.key} className="mb-1">
           <button
             onClick={() => toggleBrand(b.key)}
@@ -76,7 +77,10 @@ export default function Sidebar({
             {PROJECT_ITEMS.map(item => (
               <li key={item}>
                 <button
-                  onClick={() => onSelect(b.key, item)}
+                  onClick={() => {
+                    onSelect(b.key, item)
+                    setSidebarOpen(false)
+                  }}
                   className="flex items-center gap-2 w-full px-2 py-1 text-sm rounded hover:bg-gray-800"
                 >
                   <DocumentTextIcon className="w-4 h-4" /> {item}
