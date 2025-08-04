@@ -18,6 +18,7 @@ from typing import Callable, Any, Dict, List
 
 from tools.image_generator import ImageGeneratorTool
 from tools.web_browser import WebBrowserTool
+from core.crm import CRM
 
 
 def register_api_endpoints(app: Flask, require_auth: Callable) -> None:
@@ -27,6 +28,8 @@ def register_api_endpoints(app: Flask, require_auth: Callable) -> None:
         'web': WebBrowserTool(),
         ImageGeneratorTool.name: ImageGeneratorTool(),
     }
+
+    crm = CRM()
 
     # Persistent storage for chat and tasks
     memory_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'memory', 'chat_memory.json')
@@ -80,6 +83,52 @@ def register_api_endpoints(app: Flask, require_auth: Callable) -> None:
     # project.  A project.json file is created when a new project is
     # registered via the /api/projects POST endpoint.
     projects_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'memory')
+
+    @app.route('/api/agent/run', methods=['POST'])
+    @require_auth
+    def api_agent_run() -> Any:
+        data = request.get_json(force=True)
+        agent_name = (data.get('agent') or '').strip()
+        action = (data.get('action') or '').strip()
+        payload = data.get('input')
+        ajax_agent = app.config['ajax_agent']
+        agent = ajax_agent.agent_registry.get(agent_name)
+        if not agent:
+            return jsonify({'error': 'unknown agent'}), 400
+        try:
+            result = agent.run(action or 'chat', payload)
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+        timestamp = datetime.now().isoformat()
+        append_task_log({'timestamp': timestamp, 'task': f'{agent_name}:{action}', 'response': result})
+        return jsonify({'response': result, 'timestamp': timestamp})
+
+    @app.route('/api/crm/<string:brand>', methods=['GET', 'POST'])
+    @require_auth
+    def api_crm(brand: str) -> Any:
+        if request.method == 'GET':
+            return jsonify(crm.get_brand(brand))
+        data = request.get_json(force=True)
+        if brand == 'remote100k':
+            crm.add_remote100k_sub(
+                data.get('email', ''),
+                data.get('plan', ''),
+                data.get('entry_point', ''),
+            )
+        elif brand == 'tradeview_ai':
+            crm.add_tradeview_demo(
+                data.get('timestamp', ''),
+                data.get('contact', ''),
+            )
+        elif brand == 'app_304':
+            crm.add_tiktok_lead(
+                data.get('name', ''),
+                data.get('account', ''),
+                data.get('source', ''),
+            )
+        else:
+            return jsonify({'error': 'unknown brand'}), 400
+        return jsonify({'status': 'ok'})
 
     # Handle chat messages with presence, slash commands and memory
     def process_chat_message(message: str, ajax_agent) -> str:

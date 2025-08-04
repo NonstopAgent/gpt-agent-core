@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Link, useLocation } from 'react-router-dom'
 import {
   ChevronDownIcon,
   ChevronRightIcon,
@@ -29,6 +30,7 @@ export default function Sidebar({
 }) {
   const [openKey, setOpenKey] = useState('')
   const [newProjectName, setNewProjectName] = useState('')
+  const location = useLocation()
 
   function toggleBrand(key) {
     setOpenKey(prev => (prev === key ? '' : key))
@@ -106,6 +108,55 @@ export default function Sidebar({
             <PlusIcon className="w-4 h-4" />
           </button>
         </div>
+      </div>
+      <div className="mt-6">
+        <div className="text-sm font-semibold mb-1">Agents</div>
+        <ul className="space-y-1">
+          {[
+            { path: '/agents/growth', label: 'Growth' },
+            { path: '/agents/dev', label: 'Dev' },
+            { path: '/agents/support', label: 'Support' },
+            { path: '/agents/ops', label: 'Ops' },
+          ].map(a => (
+            <li key={a.path}>
+              <Link
+                to={a.path}
+                onClick={() => setSidebarOpen(false)}
+                className={`block px-2 py-1 rounded ${
+                  location.pathname === a.path
+                    ? 'bg-gray-200 dark:bg-gray-800'
+                    : 'hover:bg-gray-200 dark:hover:bg-gray-800'
+                }`}
+              >
+                {a.label}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </div>
+      <div className="mt-6">
+        <div className="text-sm font-semibold mb-1">CRM</div>
+        <ul className="space-y-1">
+          {[
+            { path: '/crm/remote100k', label: 'Remote100K' },
+            { path: '/crm/tradeview_ai', label: 'Tradeview' },
+            { path: '/crm/app_304', label: '304 App' },
+          ].map(c => (
+            <li key={c.path}>
+              <Link
+                to={c.path}
+                onClick={() => setSidebarOpen(false)}
+                className={`block px-2 py-1 rounded ${
+                  location.pathname === c.path
+                    ? 'bg-gray-200 dark:bg-gray-800'
+                    : 'hover:bg-gray-200 dark:hover:bg-gray-800'
+                }`}
+              >
+                {c.label}
+              </Link>
+            </li>
+          ))}
+        </ul>
       </div>
     </aside>
   )
