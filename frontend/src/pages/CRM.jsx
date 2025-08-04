@@ -8,6 +8,7 @@ export default function CRMPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   useEffect(() => {
+    if (!brand) return
     async function load() {
       const res = await fetch(`/api/crm/${brand}`)
       const data = await res.json()
@@ -21,7 +22,7 @@ export default function CRMPage() {
     <div className="flex h-screen">
       <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
       <main className="flex-1 flex flex-col">
-        <header className="p-4 border-b">CRM for {brand}</header>
+        <header className="p-4 border-b">{brand ? `CRM for ${brand}` : 'CRM'}</header>
         <div className="p-4 space-y-2 text-sm">
           {records.map((r, i) => (
             <pre key={i} className="bg-gray-100 dark:bg-gray-800 p-2 rounded">{JSON.stringify(r, null, 2)}</pre>
