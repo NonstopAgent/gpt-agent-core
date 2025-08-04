@@ -38,7 +38,9 @@ Feel free to extend this class or register additional agents using
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
+import json
+import os
 
 
 @dataclass
@@ -67,8 +69,10 @@ class Personality:
 from .agents.base_agent import BaseAgent
 from .agents.investor_agent import InvestorAgent
 from .agents.fanpage_agent import FanpageAgent
-from .agents.support_agent import SupportAgent
-from .agents.growth_agent import GrowthAgent
+from .agents.growth import GrowthAgent
+from .agents.dev import DevAgent
+from .agents.support import SupportAgent
+from .agents.ops import OpsAgent
 
 
 class AjaxAI(BaseAgent):
@@ -130,6 +134,27 @@ class AjaxAI(BaseAgent):
         # and return a response string.
         self.agent_registry: Dict[str, BaseAgent] = {}
 
+        # Persistent memory store tracking brand information and past actions
+        self._memory_path = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)),
+            "..",
+            "memory",
+            "agent_memory.json",
+        )
+        if os.path.exists(self._memory_path):
+            with open(self._memory_path, "r", encoding="utf-8") as f:
+                self.memory: Dict[str, Any] = json.load(f)
+        else:
+            self.memory = {
+                "brands": {
+                    "remote100k": {},
+                    "tradeview_ai": {},
+                    "app_304": {},
+                },
+                "actions": [],
+            }
+            self._save_memory()
+
     def register_agent(self, name: str, agent: BaseAgent) -> None:
         """Register a subordinate agent for task delegation.
 
@@ -143,6 +168,22 @@ class AjaxAI(BaseAgent):
         if name in self.agent_registry:
             raise ValueError(f"Agent '{name}' is already registered.")
         self.agent_registry[name] = agent
+
+    def remember(self, brand: str, key: str, value: Any) -> None:
+        brand_mem = self.memory.setdefault("brands", {}).setdefault(brand, {})
+        brand_mem[key] = value
+        self.memory.setdefault("actions", []).append(
+            {"brand": brand, "key": key, "value": value}
+        )
+        self._save_memory()
+
+    def recall(self, brand: str, key: str) -> Any:
+        return self.memory.get("brands", {}).get(brand, {}).get(key)
+
+    def _save_memory(self) -> None:
+        os.makedirs(os.path.dirname(self._memory_path), exist_ok=True)
+        with open(self._memory_path, "w", encoding="utf-8") as f:
+            json.dump(self.memory, f, indent=2)
 
     def delegate(self, name: str, task: str) -> str:
         """Delegate a task to a registered agent.
@@ -220,8 +261,10 @@ def build_default_ajax() -> AjaxAI:
     ajax = AjaxAI()
     ajax.register_agent("investor", InvestorAgent())
     ajax.register_agent("fanpage", FanpageAgent())
-    ajax.register_agent("support", SupportAgent())
     ajax.register_agent("growth", GrowthAgent())
+    ajax.register_agent("dev", DevAgent())
+    ajax.register_agent("support", SupportAgent())
+    ajax.register_agent("ops", OpsAgent())
     return ajax
 
 
