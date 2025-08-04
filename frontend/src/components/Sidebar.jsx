@@ -113,10 +113,10 @@ export default function Sidebar({
         <div className="text-sm font-semibold mb-1">Agents</div>
         <ul className="space-y-1">
           {[
-            { path: '/agents/growth', label: 'Growth' },
-            { path: '/agents/dev', label: 'Dev' },
-            { path: '/agents/support', label: 'Support' },
-            { path: '/agents/ops', label: 'Ops' },
+            { path: '/agents/dev', label: 'Dev Agent' },
+            { path: '/agents/growth', label: 'Growth Agent' },
+            { path: '/agents/support', label: 'Support Agent' },
+            { path: '/agents/ops', label: 'Ops Agent' },
           ].map(a => (
             <li key={a.path}>
               <Link
@@ -137,25 +137,19 @@ export default function Sidebar({
       <div className="mt-6">
         <div className="text-sm font-semibold mb-1">CRM</div>
         <ul className="space-y-1">
-          {[
-            { path: '/crm/remote100k', label: 'Remote100K' },
-            { path: '/crm/tradeview_ai', label: 'Tradeview' },
-            { path: '/crm/app_304', label: '304 App' },
-          ].map(c => (
-            <li key={c.path}>
-              <Link
-                to={c.path}
-                onClick={() => setSidebarOpen(false)}
-                className={`block px-2 py-1 rounded ${
-                  location.pathname === c.path
-                    ? 'bg-gray-200 dark:bg-gray-800'
-                    : 'hover:bg-gray-200 dark:hover:bg-gray-800'
-                }`}
-              >
-                {c.label}
-              </Link>
-            </li>
-          ))}
+          <li>
+            <Link
+              to="/crm"
+              onClick={() => setSidebarOpen(false)}
+              className={`block px-2 py-1 rounded ${
+                location.pathname === '/crm'
+                  ? 'bg-gray-200 dark:bg-gray-800'
+                  : 'hover:bg-gray-200 dark:hover:bg-gray-800'
+              }`}
+            >
+              CRM
+            </Link>
+          </li>
         </ul>
       </div>
     </aside>
