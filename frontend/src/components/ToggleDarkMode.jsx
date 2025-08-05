@@ -1,17 +1,37 @@
 /**
- * Dark mode toggle component.  Displays a switch in the top‑right
- * corner and relies on the parent component to persist the setting in
- * localStorage.  This component does not render anything on smaller
- * devices when embedded into the sidebar; instead, use it in your page
- * layout.
+ * Dark mode toggle component. Displays a switch in the top-right corner.
+ * Persists dark mode preference to localStorage and toggles 'dark' class on document.documentElement.
  */
+import { useEffect } 
 export default function ToggleDarkMode({ darkMode, setDarkMode }) {
+  // Initialize dark mode from localStorage on mount
+  useEffect(() => {
+    const stored = localStorage.getItem('darkMode');
+    if (stored === 'true') {
+      setDarkMode(true);
+      document.documentElement.classList.add('dark');
+    } else {
+      setDarkMode(false);
+      document.documentElement.classList.remove('dark');
+    }
+  }, [setDarkMode]);
+
+  const handleToggle = () => {
+    const newMode = !darkMode;
+    setDarkMode(newMode);
+    if (newMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+    localStorage.setItem('darkMode', newMode);
+  };
+
   return (
     <button
-      onClick={() => setDarkMode(!darkMode)}
+      onClick={handleToggle}
       className="text-sm px-3 py-2 rounded-md border border-gray-300 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 transition"
     >
       {darkMode ? '☀️ Light' : '🌙 Dark'}
     </button>
   )
-}
