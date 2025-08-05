@@ -2,7 +2,7 @@
  * Dark mode toggle component. Displays a switch in the top-right corner.
  * Persists dark mode preference to localStorage and toggles 'dark' class on document.documentElement.
  */
-import { useEffect } 
+i
 export default function ToggleDarkMode({ darkMode, setDarkMode }) {
   // Initialize dark mode from localStorage on mount
   useEffect(() => {
@@ -35,3 +35,6 @@ export default function ToggleDarkMode({ darkMode, setDarkMode }) {
       {darkMode ? '☀️ Light' : '🌙 Dark'}
     </button>
   )
+
+
+  
